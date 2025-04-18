@@ -42,8 +42,7 @@ export function IntegratedCardEditor({
   const [isExporting, setIsExporting] = useState(false)
   const [isProcessingImage, setIsProcessingImage] = useState(false); // 画像処理中のフラグは維持
 
-  // Use an array of refs for the input elements
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null)
   // 削除する Ref: previewContainerRef
   // const previewContainerRef = useRef<HTMLDivElement>(null)
   const printRef = useRef<HTMLDivElement>(null)
@@ -80,70 +79,96 @@ export function IntegratedCardEditor({
     return mm * scale;
   }, [a4Width, printRef]); // Added printRef dependency
 
-  // Handle file selection - triggered after a slot is clicked and file input changes
-  // Accept index directly, reset target value
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const file = e.target.files?.[0];
-
-    // Check if a file was selected
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (file) {
-      processImage(file, index);
+      processImage(file)
     }
+  }
 
-    // Reset the specific input's value
-    e.target.value = "";
-
-    // Optionally reset selectedCardIndex after processing? Or keep it highlighted?
-    // setSelectedCardIndex(null); // Keep highlighting for now
-  };
-
-  // Process image and update the specific card slot
-  const processImage = useCallback((file: File, index: number) => {
+  // Process image - Updated to calculate initial fit scale
+  const processImage = useCallback((file: File) => {
     setIsProcessingImage(true); // Start processing
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (event) => {
-      const img = new Image();
+      const img = new Image()
       img.onload = () => {
-        const imageDataUrl = event.target?.result as string;
-        const originalSize = { width: img.width, height: img.height };
+        const newOriginalSize = { width: img.width, height: img.height };
+        setOriginalImageSize(newOriginalSize);
+        setUploadedImage(img.src);
 
-        // Update the specific card in the array
-        onCardUpdate(
-          {
-            image: imageDataUrl,
-            scale: 1, // Always fit, scale is 1
-            type: cardType,
-            originalSize: originalSize,
-            position: { x: 0, y: 0 }, // Default position
-          },
-          index,
-        );
-        toast({
-          title: t("toast.imageAdded"),
-          // TODO: Add translations for these keys if needed
-          description: `画像をスロット ${index + 1} に追加しました。`,
-        });
+        // Calculate initial fit scale based on preview container
+        if (previewContainerRef.current && newOriginalSize.width > 0 && newOriginalSize.height > 0) {
+          const container = previewContainerRef.current;
+          const containerWidth = container.clientWidth;
+          const containerHeight = container.clientHeight;
+          const imageAspectRatio = newOriginalSize.width / newOriginalSize.height;
+          const containerAspectRatio = containerWidth / containerHeight;
+
+          let fitScale;
+          if (imageAspectRatio > containerAspectRatio) {
+            fitScale = containerWidth / newOriginalSize.width; // Fit width
+          } else {
+            fitScale = containerHeight / newOriginalSize.height; // Fit height
+          }
+          // Don't set imageScale state with fitScale. imageScale is now relative.
+          console.log("Calculated preview fit scale (for reference):", fitScale);
+        }
+        // Reset the user-controlled relative scale to 1 (fitted) for the new image
+        setImageScale(1);
         setIsProcessingImage(false); // End processing
-      };
+      }
       img.onerror = () => {
         console.error("Failed to load image for processing.");
-        // No need to update deleted states
+        setUploadedImage(null);
+        setOriginalImageSize({ width: 0, height: 0 });
+        setImageScale(1);
         setIsProcessingImage(false); // End processing on error
         toast({ title: "画像読み込みエラー", description: "画像の読み込みに失敗しました。", variant: "destructive" });
-      };
-      img.src = event.target?.result as string;
-    };
+      }
+      img.src = event.target?.result as string
+    }
     reader.onerror = () => {
-      console.error("FileReader error.");
-      setIsProcessingImage(false); // End processing on error
-      toast({ title: "ファイル読み込みエラー", description: "ファイルの読み込みに失敗しました。", variant: "destructive" });
-    };
-    reader.readAsDataURL(file);
-  }, [onCardUpdate, cardType, t]); // Removed previewContainerRef, added onCardUpdate, cardType, t
+       console.error("FileReader error.");
+       setIsProcessingImage(false); // End processing on error
+       toast({ title: "ファイル読み込みエラー", description: "ファイルの読み込みに失敗しました。", variant: "destructive" });
+    }
+    reader.readAsDataURL(file)
+  }, [previewContainerRef]); // Dependency on the ref container
 
-  // Drag and Drop 機能は削除 (handleDragOver, handleDrop)
+  // Handle drag and drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
 
-  // handleSaveCard は不要になったため削除
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      processImage(files[0])
+    }
+  }
+
+  // Save current card
+  const handleSaveCard = () => {
+    if (uploadedImage) {
+      onCardUpdate(
+        {
+          image: uploadedImage,
+          scale: imageScale, // Save the scale from the slider/input
+          type: cardType,
+          originalSize: originalImageSize,
+          position: { x: 0, y: 0 }, // Add default position
+        },
+        selectedCardIndex,
+      )
+      toast({
+        title: t("toast.cardSaved"),
+        description: `${t("toast.cardSavedDesc")} ${selectedCardIndex + 1}`,
+      })
+    }
+  }
 
   // renderCanvas を useCallback でラップ
   const renderCanvas = useCallback(() => {
@@ -257,7 +282,39 @@ export function IntegratedCardEditor({
     // Dependencies for renderCanvas - Added mmToPixels
   }, [cards, spacing, cardType, a4Width, width, height, marginX, marginY, cardsPerRow, cardsPerColumn, mmToPixels]);
 
-  // useEffect for loading selected card data is removed as the editor panel is gone.
+  // useEffect to load selected card data
+  useEffect(() => {
+    const selectedCard = cards[selectedCardIndex];
+    if (selectedCard) {
+      setUploadedImage(selectedCard.image);
+      // IMPORTANT: Only set scale from saved data if NOT currently processing a new image upload.
+      // This prevents the saved scale from immediately overwriting the calculated fit scale.
+      if (!isProcessingImage) {
+          setImageScale(selectedCard.scale || 1); // Use saved scale or default to 1
+      }
+      // Load original size regardless
+      if (selectedCard.originalSize) {
+        setOriginalImageSize(selectedCard.originalSize);
+      } else if (selectedCard.image) {
+         // If originalSize is missing, try to load the image to get dimensions
+         const img = new Image();
+         img.onload = () => setOriginalImageSize({ width: img.width, height: img.height });
+         img.onerror = () => setOriginalImageSize({ width: 0, height: 0 }); // Handle image load error
+         img.src = selectedCard.image;
+      } else {
+        setOriginalImageSize({ width: 0, height: 0 });
+      }
+    } else {
+      // Clear fields if no card is selected or card data is missing
+      setUploadedImage(null);
+      setImageScale(1);
+      setOriginalImageSize({ width: 0, height: 0 });
+    }
+    // Dependency: Only run when selected card index or the cards array changes.
+  }, [selectedCardIndex, cards]);
+
+  // Removed the useEffect that recalculated scale based on uploadedImage/originalImageSize
+  // The logic is now handled within processImage for initial fit and the above useEffect for loading saved scale.
 
    // useEffect to trigger canvas render
    useEffect(() => {
@@ -335,6 +392,21 @@ export function IntegratedCardEditor({
   // Component JSX
   return (
     <div className="space-y-6">
+      {/* Card Selection Grid */}
+      <div className="grid grid-cols-3 md:grid-cols-9 gap-2 mb-4">
+        {Array(cardsPerRow * cardsPerColumn).fill(0).slice(0, 9).map((_, index) => ( // Limit to 9 slots for now
+          <Button
+            key={index}
+            variant={selectedCardIndex === index ? "default" : "outline"}
+            className={`h-12 flex items-center justify-center relative ${selectedCardIndex === index ? "bg-gold-500 hover:bg-gold-600" : ""} ${cards[index] ? "border-gold-300" : ""}`}
+            onClick={() => setSelectedCardIndex(index)}
+          >
+            {index + 1}
+            {cards[index] && <div className="w-2 h-2 bg-green-500 rounded-full absolute top-1 right-1 ring-1 ring-white"></div>} {/* Changed indicator */}
+          </Button>
+        ))}
+      </div>
+
       {/* Main Content Area - Simplified to only show Print Layout */}
       <div className="grid grid-cols-1 gap-6">
         {/* Print Layout Preview */}
@@ -389,20 +461,8 @@ export function IntegratedCardEditor({
                           selectedCardIndex === index ? "ring-2 ring-gold-500 ring-offset-1 bg-blue-100/50 dark:bg-blue-900/50" : ""
                         }`}
                         style={{ pointerEvents: "auto" }} // Cells capture clicks
-                        onClick={() => {
-                          setSelectedCardIndex(index); // Keep for highlighting
-                          // Click the specific input using the ref array
-                          inputRefs.current[index]?.click();
-                        }}
+                        onClick={() => setSelectedCardIndex(index)}
                       >
-                        {/* Hidden file input specific to this cell, assign ref */}
-                        <Input
-                          ref={(el) => { inputRefs.current[index] = el; }} // Correct ref assignment
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => handleFileChange(e, index)} // Pass index
-                        />
                         {/* Remove button inside grid cell */}
                         {cards[index] && (
                           <Button
@@ -422,7 +482,6 @@ export function IntegratedCardEditor({
                       </div>
                     ))}
                   </div>
-                  {/* No single hidden input needed here anymore */}
                 </div>
               </div>
             </div>

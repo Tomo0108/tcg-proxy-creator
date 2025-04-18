@@ -1,5 +1,4 @@
 // PDF and PNG generation implementation with improved quality
-import { jsPDF } from "jspdf"; // Import jsPDF directly
 import { createPrintReadyCanvas, renderHighQualityCards } from "./cmyk-conversion"
 
 export interface CardData {
@@ -29,7 +28,31 @@ export interface PrintLayoutOptions {
   }
 }
 
-// Removed the dynamic loadJsPDF function
+// Helper function to load jsPDF dynamically
+async function loadJsPDF() {
+  // In a real implementation, we would import jsPDF directly
+  // For this demo, we'll dynamically load it from CDN
+  return new Promise<any>((resolve, reject) => {
+    // Check if jsPDF is already loaded
+    if ((window as any).jspdf && (window as any).jspdf.jsPDF) {
+      resolve((window as any).jspdf.jsPDF)
+      return
+    }
+
+    // Load jsPDF script
+    const script = document.createElement("script")
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+    script.onload = () => {
+      if ((window as any).jspdf && (window as any).jspdf.jsPDF) {
+        resolve((window as any).jspdf.jsPDF)
+      } else {
+        reject(new Error("Failed to load jsPDF"))
+      }
+    }
+    script.onerror = () => reject(new Error("Failed to load jsPDF"))
+    document.head.appendChild(script)
+  })
+}
 
 export async function generatePDF(options: PrintLayoutOptions): Promise<Blob> {
   try {
@@ -53,9 +76,11 @@ export async function generatePDF(options: PrintLayoutOptions): Promise<Blob> {
       printCanvas = createPrintReadyCanvas(options.canvas, dpi, cmykConversion)
     }
 
-    // Use the imported jsPDF class directly
+    // Load jsPDF
+    const jsPDF = await loadJsPDF()
+
     // A4 size in mm: 210 x 297
-    const pdf = new jsPDF({ // Instantiate directly
+    const pdf = new jsPDF({
       orientation: "portrait",
       unit: "mm",
       format: "a4",

@@ -42,8 +42,7 @@ export function IntegratedCardEditor({
   const [isExporting, setIsExporting] = useState(false)
   const [isProcessingImage, setIsProcessingImage] = useState(false); // 画像処理中のフラグは維持
 
-  // Use an array of refs for the input elements
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null)
   // 削除する Ref: previewContainerRef
   // const previewContainerRef = useRef<HTMLDivElement>(null)
   const printRef = useRef<HTMLDivElement>(null)
@@ -81,20 +80,20 @@ export function IntegratedCardEditor({
   }, [a4Width, printRef]); // Added printRef dependency
 
   // Handle file selection - triggered after a slot is clicked and file input changes
-  // Accept index directly, reset target value
+  // Modified to accept index directly
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
-
     // Check if a file was selected
     if (file) {
+      // Use the index passed directly from the onChange handler
       processImage(file, index);
     }
-
-    // Reset the specific input's value
-    e.target.value = "";
-
+    // Reset file input value to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     // Optionally reset selectedCardIndex after processing? Or keep it highlighted?
-    // setSelectedCardIndex(null); // Keep highlighting for now
+    // setSelectedCardIndex(null);
   };
 
   // Process image and update the specific card slot
@@ -390,18 +389,17 @@ export function IntegratedCardEditor({
                         }`}
                         style={{ pointerEvents: "auto" }} // Cells capture clicks
                         onClick={() => {
-                          setSelectedCardIndex(index); // Keep for highlighting
-                          // Click the specific input using the ref array
-                          inputRefs.current[index]?.click();
+                          setSelectedCardIndex(index); // Set the index to know where to put the image
+                          fileInputRef.current?.click(); // Trigger file input
                         }}
                       >
-                        {/* Hidden file input specific to this cell, assign ref */}
+                        {/* Hidden file input triggered by cell click - Pass index to handler */}
                         <Input
-                          ref={(el) => { inputRefs.current[index] = el; }} // Correct ref assignment
+                          ref={fileInputRef} // ref is still needed to trigger click()
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => handleFileChange(e, index)} // Pass index
+                          onChange={(e) => handleFileChange(e, index)} // Pass index here
                         />
                         {/* Remove button inside grid cell */}
                         {cards[index] && (
@@ -422,7 +420,6 @@ export function IntegratedCardEditor({
                       </div>
                     ))}
                   </div>
-                  {/* No single hidden input needed here anymore */}
                 </div>
               </div>
             </div>

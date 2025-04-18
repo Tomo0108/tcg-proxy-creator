@@ -187,43 +187,36 @@ export async function renderHighQualityCards(
     if (card.image) {
       return new Promise<void>((resolve) => {
         const img = new Image()
-        img.crossOrigin = "anonymous";
+        img.crossOrigin = "anonymous"
         img.onload = () => {
-          ctx.save();
-          // Clip drawing to the card boundaries (important for high-res)
-          ctx.beginPath();
-          ctx.rect(x, y, cardWidth, cardHeight);
-          ctx.clip();
+          // Calculate position and scale
+          // The center of the card
+          const cardCenterX = x + cardWidth / 2
+          const cardCenterY = y + cardHeight / 2
 
-          // Calculate image draw size similar to renderCanvas, but using high-res dimensions
-          const imgAspectRatio = img.width / img.height;
-          const cardAspectRatio = cardWidth / cardHeight;
-          const cardScale = card.scale || 1; // Use saved relative scale (1 = fitted)
+          // Apply the position offset (scaled by card dimensions)
+          const offsetX = (cardWidth * card.position.x) / 100
+          const offsetY = (cardHeight * card.position.y) / 100
 
-          // Calculate base size to fit the image within the high-res card slot (cardWidth, cardHeight)
-          let baseWidth, baseHeight;
-          if (imgAspectRatio > cardAspectRatio) { // Image wider than card slot
-            baseWidth = cardWidth; // Fit width
-            baseHeight = baseWidth / imgAspectRatio;
-          } else { // Image taller than or same aspect ratio as card slot
-            baseHeight = cardHeight; // Fit height
-            baseWidth = baseHeight * imgAspectRatio;
-          }
+          // Final position with offset
+          const imgX = cardCenterX + offsetX
+          const imgY = cardCenterY + offsetY
 
-          // Apply the relative scale to the base (fitted) size
-          const targetWidth = baseWidth * cardScale;
-          const targetHeight = baseHeight * cardScale;
+          // Calculate the correct scale for high-res output
+          // We need to scale the image proportionally to the card size
+          const imageScale = card.scale * (cardWidth / (dimensions.cardWidth * (previewDpi / 25.4)))
 
-          // Center the final scaled image within the card area (using high-res coordinates x, y)
-          const imgDrawX = x + (cardWidth - targetWidth) / 2;
-          const imgDrawY = y + (cardHeight - targetHeight) / 2;
+          // Draw the image with high quality
+          ctx.save()
+          ctx.translate(imgX, imgY)
+          ctx.scale(imageScale, imageScale)
+          ctx.translate(-img.width / 2, -img.height / 2)
 
-          // Draw the image with calculated dimensions
-          ctx.drawImage(img, imgDrawX, imgDrawY, targetWidth, targetHeight);
-
-          ctx.restore(); // Restore context to remove clipping
-          resolve();
-        };
+          // Use better quality rendering
+          ctx.drawImage(img, 0, 0)
+          ctx.restore()
+          resolve()
+        }
         img.onerror = () => {
           console.error("Failed to load image:", card.image)
           resolve()

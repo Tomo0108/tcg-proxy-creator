@@ -42,8 +42,7 @@ export function IntegratedCardEditor({
   const [isExporting, setIsExporting] = useState(false)
   const [isProcessingImage, setIsProcessingImage] = useState(false); // 画像処理中のフラグは維持
 
-  // Use an array of refs for the input elements
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  // fileInputRef is removed
   // 削除する Ref: previewContainerRef
   // const previewContainerRef = useRef<HTMLDivElement>(null)
   const printRef = useRef<HTMLDivElement>(null)
@@ -391,13 +390,13 @@ export function IntegratedCardEditor({
                         style={{ pointerEvents: "auto" }} // Cells capture clicks
                         onClick={() => {
                           setSelectedCardIndex(index); // Keep for highlighting
-                          // Click the specific input using the ref array
-                          inputRefs.current[index]?.click();
+                          // Find and click the specific input for this cell
+                          document.getElementById(`file-input-${index}`)?.click();
                         }}
                       >
-                        {/* Hidden file input specific to this cell, assign ref */}
+                        {/* Hidden file input specific to this cell */}
                         <Input
-                          ref={(el) => { inputRefs.current[index] = el; }} // Correct ref assignment
+                          id={`file-input-${index}`} // Unique ID
                           type="file"
                           accept="image/*"
                           className="hidden"

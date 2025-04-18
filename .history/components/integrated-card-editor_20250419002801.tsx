@@ -32,20 +32,16 @@ export function IntegratedCardEditor({
 }: IntegratedCardEditorProps) {
   const { t } = useTranslation()
   const isMobile = useMobileDetect()
-  // selectedCardIndex は、どのスロットに画像を追加するかを一時的に保持するために使用
-  const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
-  // 削除する State: uploadedImage, imageScale, originalImageSize
-  // const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  // const [imageScale, setImageScale] = useState(1);
-  // const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 })
+  const [selectedCardIndex, setSelectedCardIndex] = useState(0)
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const [imageScale, setImageScale] = useState(1)
+  const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 })
   const [exportQuality, setExportQuality] = useState<"standard" | "high" | "ultra">("high")
   const [isExporting, setIsExporting] = useState(false)
-  const [isProcessingImage, setIsProcessingImage] = useState(false); // 画像処理中のフラグは維持
+  const [isProcessingImage, setIsProcessingImage] = useState(false); // Add state for processing
 
-  // Use an array of refs for the input elements
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-  // 削除する Ref: previewContainerRef
-  // const previewContainerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const previewContainerRef = useRef<HTMLDivElement>(null)
   const printRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -78,72 +74,97 @@ export function IntegratedCardEditor({
     // Scale mm to pixels based on the container width representing A4 width
     const scale = containerWidth / a4Width;
     return mm * scale;
-  }, [a4Width, printRef]); // Added printRef dependency
+  }, [a4Width]); // a4Width is constant
 
-  // Handle file selection - triggered after a slot is clicked and file input changes
-  // Accept index directly, reset target value
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const file = e.target.files?.[0];
-
-    // Check if a file was selected
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (file) {
-      processImage(file, index);
+      processImage(file)
     }
+  }
 
-    // Reset the specific input's value
-    e.target.value = "";
-
-    // Optionally reset selectedCardIndex after processing? Or keep it highlighted?
-    // setSelectedCardIndex(null); // Keep highlighting for now
-  };
-
-  // Process image and update the specific card slot
-  const processImage = useCallback((file: File, index: number) => {
+  // Process image - Updated to calculate initial fit scale
+  const processImage = useCallback((file: File) => {
     setIsProcessingImage(true); // Start processing
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (event) => {
-      const img = new Image();
+      const img = new Image()
       img.onload = () => {
-        const imageDataUrl = event.target?.result as string;
-        const originalSize = { width: img.width, height: img.height };
+        const newOriginalSize = { width: img.width, height: img.height };
+        setOriginalImageSize(newOriginalSize);
+        setUploadedImage(img.src);
 
-        // Update the specific card in the array
-        onCardUpdate(
-          {
-            image: imageDataUrl,
-            scale: 1, // Always fit, scale is 1
-            type: cardType,
-            originalSize: originalSize,
-            position: { x: 0, y: 0 }, // Default position
-          },
-          index,
-        );
-        toast({
-          title: t("toast.imageAdded"),
-          // TODO: Add translations for these keys if needed
-          description: `画像をスロット ${index + 1} に追加しました。`,
-        });
+        // Calculate initial fit scale based on preview container
+        if (previewContainerRef.current && newOriginalSize.width > 0 && newOriginalSize.height > 0) {
+          const container = previewContainerRef.current;
+          const containerWidth = container.clientWidth;
+          const containerHeight = container.clientHeight;
+          const imageAspectRatio = newOriginalSize.width / newOriginalSize.height;
+          const containerAspectRatio = containerWidth / containerHeight;
+
+          let fitScale;
+          if (imageAspectRatio > containerAspectRatio) {
+            fitScale = containerWidth / newOriginalSize.width; // Fit width
+          } else {
+            fitScale = containerHeight / newOriginalSize.height; // Fit height
+          }
+          setImageScale(fitScale); // Set initial scale to fit
+          console.log("Calculated initial fit scale:", fitScale);
+        } else {
+          setImageScale(1); // Fallback if container ref or image size is invalid
+        }
         setIsProcessingImage(false); // End processing
-      };
+      }
       img.onerror = () => {
         console.error("Failed to load image for processing.");
-        // No need to update deleted states
+        setUploadedImage(null);
+        setOriginalImageSize({ width: 0, height: 0 });
+        setImageScale(1);
         setIsProcessingImage(false); // End processing on error
         toast({ title: "画像読み込みエラー", description: "画像の読み込みに失敗しました。", variant: "destructive" });
-      };
-      img.src = event.target?.result as string;
-    };
+      }
+      img.src = event.target?.result as string
+    }
     reader.onerror = () => {
-      console.error("FileReader error.");
-      setIsProcessingImage(false); // End processing on error
-      toast({ title: "ファイル読み込みエラー", description: "ファイルの読み込みに失敗しました。", variant: "destructive" });
-    };
-    reader.readAsDataURL(file);
-  }, [onCardUpdate, cardType, t]); // Removed previewContainerRef, added onCardUpdate, cardType, t
+       console.error("FileReader error.");
+       setIsProcessingImage(false); // End processing on error
+       toast({ title: "ファイル読み込みエラー", description: "ファイルの読み込みに失敗しました。", variant: "destructive" });
+    }
+    reader.readAsDataURL(file)
+  }, [previewContainerRef]); // Dependency on the ref container
 
-  // Drag and Drop 機能は削除 (handleDragOver, handleDrop)
+  // Handle drag and drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
 
-  // handleSaveCard は不要になったため削除
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      processImage(files[0])
+    }
+  }
+
+  // Save current card
+  const handleSaveCard = () => {
+    if (uploadedImage) {
+      onCardUpdate(
+        {
+          image: uploadedImage,
+          scale: imageScale, // Save the scale from the slider/input
+          type: cardType,
+          originalSize: originalImageSize,
+        },
+        selectedCardIndex,
+      )
+      toast({
+        title: t("toast.cardSaved"),
+        description: `${t("toast.cardSavedDesc")} ${selectedCardIndex + 1}`,
+      })
+    }
+  }
 
   // renderCanvas を useCallback でラップ
   const renderCanvas = useCallback(() => {
@@ -159,11 +180,14 @@ export function IntegratedCardEditor({
     canvas.width = displayWidth;
     canvas.height = displayHeight;
 
-    // Use mmToPixels for consistent scaling between canvas drawing and overlay grid
-    const drawOffsetX = 0; // Draw from top-left of the canvas (Keep offset logic if needed, though it's 0 now)
+    // Calculate scale factor based on canvas width and A4 width in mm
+    // This scaleFactor converts mm units in the layout logic to pixels on the canvas
+    const scaleFactor = canvas.width / a4Width; // pixels per mm
+    const drawOffsetX = 0; // Draw from top-left of the canvas
     const drawOffsetY = 0;
 
     console.log(`Canvas size set to: ${canvas.width}x${canvas.height}`);
+    console.log(`Scale factor (canvas px / a4 mm): ${scaleFactor}`);
 
     // Clear canvas
     ctx.fillStyle = "white";
@@ -172,16 +196,16 @@ export function IntegratedCardEditor({
     ctx.imageSmoothingQuality = "high";
 
     const loadImages = cards.map((card, index) => {
-      // Draw background for the card slot using mmToPixels
+      // Draw background for the card slot regardless of image
       const row = Math.floor(index / cardsPerRow);
       const col = index % cardsPerRow;
-      // Use mmToPixels for background position and size, applying drawOffset if necessary (though it's 0)
-      const drawXBg = drawOffsetX + mmToPixels(marginX + col * (width + spacing));
-      const drawYBg = drawOffsetY + mmToPixels(marginY + row * (height + spacing));
-      const drawCardWidthBg = mmToPixels(width);
-      const drawCardHeightBg = mmToPixels(height);
+      const drawXBg = drawOffsetX + (marginX + col * (width + spacing)) * scaleFactor;
+      const drawYBg = drawOffsetY + (marginY + row * (height + spacing)) * scaleFactor;
+      const drawCardWidthBg = width * scaleFactor;
+      const drawCardHeightBg = height * scaleFactor;
       ctx.fillStyle = "#f0f0f0"; // Light grey background for card area
       ctx.fillRect(drawXBg, drawYBg, drawCardWidthBg, drawCardHeightBg);
+
 
       if (!card || !card.image) return Promise.resolve(); // Skip image drawing if no card or no image
 
@@ -189,11 +213,11 @@ export function IntegratedCardEditor({
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
-          // Use mmToPixels for position and size in CANVAS PIXELS
-          const drawX = drawOffsetX + mmToPixels(marginX + col * (width + spacing));
-          const drawY = drawOffsetY + mmToPixels(marginY + row * (height + spacing));
-          const drawCardWidth = mmToPixels(width);
-          const drawCardHeight = mmToPixels(height);
+          // Recalculate position and size in CANVAS PIXELS using scaleFactor (redundant but safe)
+          const drawX = drawOffsetX + (marginX + col * (width + spacing)) * scaleFactor;
+          const drawY = drawOffsetY + (marginY + row * (height + spacing)) * scaleFactor;
+          const drawCardWidth = width * scaleFactor;
+          const drawCardHeight = height * scaleFactor;
 
           ctx.save();
           ctx.beginPath();
@@ -203,23 +227,18 @@ export function IntegratedCardEditor({
           // Calculate image draw size to fit, maintaining aspect ratio and applying card's specific scale
           const imgAspectRatio = img.width / img.height;
           const cardAspectRatio = drawCardWidth / drawCardHeight;
-          const cardScale = card.scale || 1; // Use saved relative scale (1 = fitted)
+          const cardScale = card.scale || 1; // Use saved scale or default to 1
 
-          // Calculate base size to fit the image within the card slot (drawCardWidth, drawCardHeight)
-          let baseWidth, baseHeight;
-          if (imgAspectRatio > cardAspectRatio) { // Image wider than card slot
-            baseWidth = drawCardWidth;
-            baseHeight = baseWidth / imgAspectRatio;
-          } else { // Image taller than or same aspect ratio as card slot
-            baseHeight = drawCardHeight;
-            baseWidth = baseHeight * imgAspectRatio;
+          let targetWidth, targetHeight;
+          if (imgAspectRatio > cardAspectRatio) { // Image wider than card aspect ratio
+            targetWidth = drawCardWidth * cardScale;
+            targetHeight = targetWidth / imgAspectRatio;
+          } else { // Image taller than card aspect ratio
+            targetHeight = drawCardHeight * cardScale;
+            targetWidth = targetHeight * imgAspectRatio;
           }
 
-          // Apply the relative scale to the base (fitted) size
-          const targetWidth = baseWidth * cardScale;
-          const targetHeight = baseHeight * cardScale;
-
-          // Center the final scaled image within the card area
+          // Center the scaled image within the card area
           const imgDrawX = drawX + (drawCardWidth - targetWidth) / 2;
           const imgDrawY = drawY + (drawCardHeight - targetHeight) / 2;
 
@@ -231,11 +250,10 @@ export function IntegratedCardEditor({
           console.error("Failed to load image:", card.image);
           // Optionally draw an error indicator within the clipped area
           ctx.save();
-          // Use mmToPixels for error indicator position and size
-          const drawX = drawOffsetX + mmToPixels(marginX + col * (width + spacing));
-          const drawY = drawOffsetY + mmToPixels(marginY + row * (height + spacing));
-          const drawCardWidth = mmToPixels(width);
-          const drawCardHeight = mmToPixels(height);
+          const drawX = drawOffsetX + (marginX + col * (width + spacing)) * scaleFactor;
+          const drawY = drawOffsetY + (marginY + row * (height + spacing)) * scaleFactor;
+          const drawCardWidth = width * scaleFactor;
+          const drawCardHeight = height * scaleFactor;
           ctx.beginPath();
           ctx.rect(drawX, drawY, drawCardWidth, drawCardHeight);
           ctx.clip();
@@ -254,10 +272,42 @@ export function IntegratedCardEditor({
     Promise.all(loadImages).then(() => {
       console.log("Canvas rendering complete");
     });
-    // Dependencies for renderCanvas - Added mmToPixels
-  }, [cards, spacing, cardType, a4Width, width, height, marginX, marginY, cardsPerRow, cardsPerColumn, mmToPixels]);
+    // Dependencies for renderCanvas
+  }, [cards, spacing, cardType, a4Width, width, height, marginX, marginY, cardsPerRow, cardsPerColumn]);
 
-  // useEffect for loading selected card data is removed as the editor panel is gone.
+  // useEffect to load selected card data
+  useEffect(() => {
+    const selectedCard = cards[selectedCardIndex];
+    if (selectedCard) {
+      setUploadedImage(selectedCard.image);
+      // IMPORTANT: Only set scale from saved data if NOT currently processing a new image upload.
+      // This prevents the saved scale from immediately overwriting the calculated fit scale.
+      if (!isProcessingImage) {
+          setImageScale(selectedCard.scale || 1); // Use saved scale or default to 1
+      }
+      // Load original size regardless
+      if (selectedCard.originalSize) {
+        setOriginalImageSize(selectedCard.originalSize);
+      } else if (selectedCard.image) {
+         // If originalSize is missing, try to load the image to get dimensions
+         const img = new Image();
+         img.onload = () => setOriginalImageSize({ width: img.width, height: img.height });
+         img.onerror = () => setOriginalImageSize({ width: 0, height: 0 }); // Handle image load error
+         img.src = selectedCard.image;
+      } else {
+        setOriginalImageSize({ width: 0, height: 0 });
+      }
+    } else {
+      // Clear fields if no card is selected or card data is missing
+      setUploadedImage(null);
+      setImageScale(1);
+      setOriginalImageSize({ width: 0, height: 0 });
+    }
+    // Dependency: Only run when selected card index or the cards array changes.
+  }, [selectedCardIndex, cards]);
+
+  // Removed the useEffect that recalculated scale based on uploadedImage/originalImageSize
+  // The logic is now handled within processImage for initial fit and the above useEffect for loading saved scale.
 
    // useEffect to trigger canvas render
    useEffect(() => {
@@ -335,10 +385,115 @@ export function IntegratedCardEditor({
   // Component JSX
   return (
     <div className="space-y-6">
-      {/* Main Content Area - Simplified to only show Print Layout */}
-      <div className="grid grid-cols-1 gap-6">
+      {/* Card Selection Grid */}
+      <div className="grid grid-cols-3 md:grid-cols-9 gap-2 mb-4">
+        {Array(cardsPerRow * cardsPerColumn).fill(0).slice(0, 9).map((_, index) => ( // Limit to 9 slots for now
+          <Button
+            key={index}
+            variant={selectedCardIndex === index ? "default" : "outline"}
+            className={`h-12 flex items-center justify-center relative ${selectedCardIndex === index ? "bg-gold-500 hover:bg-gold-600" : ""} ${cards[index] ? "border-gold-300" : ""}`}
+            onClick={() => setSelectedCardIndex(index)}
+          >
+            {index + 1}
+            {cards[index] && <div className="w-2 h-2 bg-green-500 rounded-full absolute top-1 right-1 ring-1 ring-white"></div>} {/* Changed indicator */}
+          </Button>
+        ))}
+      </div>
+
+      {/* Main Content Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Card Editor */}
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-medium mb-4">{t("editor.cardPreview")} #{selectedCardIndex + 1}</h3>
+            {/* Image Upload */}
+            <div
+              className="border-2 border-dashed rounded-lg p-4 mb-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <Upload className="h-6 w-6 text-gray-400 mb-1" />
+              <p className="text-sm text-gray-500">{t("editor.clickToUpload")}</p>
+              <p className="text-xs text-gray-400">{t("editor.fileTypes")}</p>
+              <Input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+            </div>
+
+            {/* Card Preview Box */}
+            <div
+              ref={previewContainerRef}
+              className="border rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 mb-4 mx-auto relative" // Added background color for empty state
+              style={{
+                // Use fixed pixel size for preview consistency, aspect ratio based on card type
+                width: `200px`, // Fixed width
+                height: `${(height / width) * 200}px`, // Calculate height based on aspect ratio
+              }}
+            >
+              {uploadedImage ? (
+                <div
+                  style={{
+                    position: "absolute", top: `50%`, left: `50%`,
+                    // Use the actual image dimensions for transform origin if needed, but translate(-50%, -50%) works for centering
+                    transform: `translate(-50%, -50%) scale(${imageScale})`,
+                    // The div itself should match the container size for centering logic
+                    width: "100%", height: "100%",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <img
+                    src={uploadedImage}
+                    alt="Card preview"
+                    // Let the transform scale handle the size, objectFit ensures aspect ratio within the img tag boundaries if they were constrained
+                    style={{
+                        display: 'block', // Prevents extra space below image
+                        maxWidth: 'none', // Allow image to exceed container before scaling
+                        maxHeight: 'none',
+                        // Use original image size to maintain aspect ratio correctly with scale transform
+                        width: `${originalImageSize.width}px`,
+                        height: `${originalImageSize.height}px`,
+                        objectFit: "contain", // Should not be strictly necessary with explicit w/h + scale
+                     }}
+                    draggable={false}
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-500">
+                  <p className="text-sm">{t("editor.noImage")}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Image Controls */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="image-scale">{t("editor.imageScale")}</Label>
+                <div className="flex items-center gap-2 mt-2">
+                  <Input
+                    id="image-scale" type="range" min="0.1" max="3" step="0.01" // Range slider for scale
+                    value={imageScale}
+                    onChange={(e) => setImageScale(Number(e.target.value))}
+                    disabled={!uploadedImage}
+                    className="w-full"
+                  />
+                   <span className="text-sm text-gray-500 w-12 text-right">{imageScale.toFixed(2)}x</span> {/* Display value */}
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <Button className="flex-1 bg-gold-500 hover:bg-gold-600" onClick={handleSaveCard} disabled={!uploadedImage}>
+                  {t("editor.saveToCard")} {selectedCardIndex + 1}
+                </Button>
+                {cards[selectedCardIndex] && (
+                  <Button variant="destructive" size="icon" className="w-10 flex-none" onClick={() => onCardRemove(selectedCardIndex)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Print Layout Preview */}
-        <Card className="col-span-1"> {/* Ensure it takes full width */}
+        <Card>
           <CardContent className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">{t("layout.preview")}</h3>
@@ -351,18 +506,13 @@ export function IntegratedCardEditor({
                 style={{
                   width: "100%", aspectRatio: `${a4Width} / ${a4Height}`,
                   boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)", overflow: "hidden",
-                  }}
-                >
-                  {/* Canvas for drawing - Added explicit style reset */}
-                  <canvas
-                    ref={canvasRef}
-                    id="print-layout-canvas"
-                    className="absolute top-0 left-0 w-full h-full"
-                    style={{ padding: 0, border: 'none', margin: 0, display: 'block' }} // Added style reset
-                  />
+                }}
+              >
+                {/* Canvas for drawing */}
+                <canvas ref={canvasRef} id="print-layout-canvas" className="absolute top-0 left-0 w-full h-full" />
 
-                  {/* Overlay Grid for Interaction - Scaled using mmToPixels */}
-                  <div
+                {/* Overlay Grid for Interaction - Scaled using mmToPixels */}
+                <div
                   className="absolute top-0 left-0 w-full h-full z-10"
                   style={{
                     // Use mmToPixels which now scales based on printRef width
@@ -389,20 +539,8 @@ export function IntegratedCardEditor({
                           selectedCardIndex === index ? "ring-2 ring-gold-500 ring-offset-1 bg-blue-100/50 dark:bg-blue-900/50" : ""
                         }`}
                         style={{ pointerEvents: "auto" }} // Cells capture clicks
-                        onClick={() => {
-                          setSelectedCardIndex(index); // Keep for highlighting
-                          // Click the specific input using the ref array
-                          inputRefs.current[index]?.click();
-                        }}
+                        onClick={() => setSelectedCardIndex(index)}
                       >
-                        {/* Hidden file input specific to this cell, assign ref */}
-                        <Input
-                          ref={(el) => { inputRefs.current[index] = el; }} // Correct ref assignment
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => handleFileChange(e, index)} // Pass index
-                        />
                         {/* Remove button inside grid cell */}
                         {cards[index] && (
                           <Button
@@ -422,7 +560,6 @@ export function IntegratedCardEditor({
                       </div>
                     ))}
                   </div>
-                  {/* No single hidden input needed here anymore */}
                 </div>
               </div>
             </div>

@@ -42,8 +42,7 @@ export function IntegratedCardEditor({
   const [isExporting, setIsExporting] = useState(false)
   const [isProcessingImage, setIsProcessingImage] = useState(false); // 画像処理中のフラグは維持
 
-  // Use an array of refs for the input elements
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null)
   // 削除する Ref: previewContainerRef
   // const previewContainerRef = useRef<HTMLDivElement>(null)
   const printRef = useRef<HTMLDivElement>(null)
@@ -81,20 +80,18 @@ export function IntegratedCardEditor({
   }, [a4Width, printRef]); // Added printRef dependency
 
   // Handle file selection - triggered after a slot is clicked and file input changes
-  // Accept index directly, reset target value
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-
-    // Check if a file was selected
-    if (file) {
-      processImage(file, index);
+    // Check if a file was selected and which slot was clicked
+    if (file && selectedCardIndex !== null) {
+      processImage(file, selectedCardIndex);
     }
-
-    // Reset the specific input's value
-    e.target.value = "";
-
+    // Reset file input value to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     // Optionally reset selectedCardIndex after processing? Or keep it highlighted?
-    // setSelectedCardIndex(null); // Keep highlighting for now
+    // setSelectedCardIndex(null);
   };
 
   // Process image and update the specific card slot
@@ -335,6 +332,21 @@ export function IntegratedCardEditor({
   // Component JSX
   return (
     <div className="space-y-6">
+      {/* Card Selection Grid */}
+      <div className="grid grid-cols-3 md:grid-cols-9 gap-2 mb-4">
+        {Array(cardsPerRow * cardsPerColumn).fill(0).slice(0, 9).map((_, index) => ( // Limit to 9 slots for now
+          <Button
+            key={index}
+            variant={selectedCardIndex === index ? "default" : "outline"}
+            className={`h-12 flex items-center justify-center relative ${selectedCardIndex === index ? "bg-gold-500 hover:bg-gold-600" : ""} ${cards[index] ? "border-gold-300" : ""}`}
+            onClick={() => setSelectedCardIndex(index)}
+          >
+            {index + 1}
+            {cards[index] && <div className="w-2 h-2 bg-green-500 rounded-full absolute top-1 right-1 ring-1 ring-white"></div>} {/* Changed indicator */}
+          </Button>
+        ))}
+      </div>
+
       {/* Main Content Area - Simplified to only show Print Layout */}
       <div className="grid grid-cols-1 gap-6">
         {/* Print Layout Preview */}
@@ -390,19 +402,12 @@ export function IntegratedCardEditor({
                         }`}
                         style={{ pointerEvents: "auto" }} // Cells capture clicks
                         onClick={() => {
-                          setSelectedCardIndex(index); // Keep for highlighting
-                          // Click the specific input using the ref array
-                          inputRefs.current[index]?.click();
+                          setSelectedCardIndex(index); // Set the index to know where to put the image
+                          fileInputRef.current?.click(); // Trigger file input
                         }}
                       >
-                        {/* Hidden file input specific to this cell, assign ref */}
-                        <Input
-                          ref={(el) => { inputRefs.current[index] = el; }} // Correct ref assignment
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => handleFileChange(e, index)} // Pass index
-                        />
+                        {/* Hidden file input triggered by cell click */}
+                        <Input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                         {/* Remove button inside grid cell */}
                         {cards[index] && (
                           <Button
@@ -422,7 +427,6 @@ export function IntegratedCardEditor({
                       </div>
                     ))}
                   </div>
-                  {/* No single hidden input needed here anymore */}
                 </div>
               </div>
             </div>

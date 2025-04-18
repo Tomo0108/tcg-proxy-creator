@@ -198,23 +198,20 @@ export async function renderHighQualityCards(
           // Calculate image draw size similar to renderCanvas, but using high-res dimensions
           const imgAspectRatio = img.width / img.height;
           const cardAspectRatio = cardWidth / cardHeight;
-          const cardScale = card.scale || 1; // Use saved relative scale (1 = fitted)
+          const cardScale = card.scale || 1; // Use saved scale or default to 1
 
-          // Calculate base size to fit the image within the high-res card slot (cardWidth, cardHeight)
-          let baseWidth, baseHeight;
-          if (imgAspectRatio > cardAspectRatio) { // Image wider than card slot
-            baseWidth = cardWidth; // Fit width
-            baseHeight = baseWidth / imgAspectRatio;
-          } else { // Image taller than or same aspect ratio as card slot
-            baseHeight = cardHeight; // Fit height
-            baseWidth = baseHeight * imgAspectRatio;
+          let targetWidth, targetHeight;
+          if (imgAspectRatio > cardAspectRatio) { // Image wider than card aspect ratio
+            targetWidth = cardWidth * cardScale;
+            targetHeight = targetWidth / imgAspectRatio;
+          } else { // Image taller than card aspect ratio
+            targetHeight = cardHeight * cardScale;
+            targetWidth = targetHeight * imgAspectRatio;
           }
 
-          // Apply the relative scale to the base (fitted) size
-          const targetWidth = baseWidth * cardScale;
-          const targetHeight = baseHeight * cardScale;
-
-          // Center the final scaled image within the card area (using high-res coordinates x, y)
+          // Center the scaled image within the card area (using high-res coordinates)
+          // Note: card.position is ignored for now, assuming centering is desired.
+          // If card.position needs to be implemented, adjust imgDrawX/Y accordingly.
           const imgDrawX = x + (cardWidth - targetWidth) / 2;
           const imgDrawY = y + (cardHeight - targetHeight) / 2;
 

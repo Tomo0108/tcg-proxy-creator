@@ -397,7 +397,7 @@ export function IntegratedCardEditor({
                       >
                         {/* Hidden file input specific to this cell, assign ref */}
                         <Input
-                          ref={(el) => { inputRefs.current[index] = el; }} // Correct ref assignment
+                          ref={(el) => (inputRefs.current[index] = el)} // Assign ref to the array element
                           type="file"
                           accept="image/*"
                           className="hidden"
