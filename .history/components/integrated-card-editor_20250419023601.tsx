@@ -469,22 +469,130 @@ export function IntegratedCardEditor({
                         >
                           <Input
                             ref={(el) => {
-                                // Dynamically size inputRefs array if needed, or ensure it's pre-sized
-                                // For simplicity, let's assume it's large enough or handle potential undefined access
-                                if (index < cardsPerRow * cardsPerColumn) { // Check index validity
+          paddingTop: `${paddingTopPx}px`,
+          width: `${gridWidthPx}px`,
+          height: `${gridHeightPx}px`,
+          pointerEvents: "none" as const, // Type assertion for pointerEvents
+      };
+  }, [containerWidth, cardsPerRow, cardsPerColumn, marginXMM, marginYMM, gridWidthMM, gridHeightMM, mmToPixels]);
+
+  const gridStyles = useMemo(() => {
+      if (containerWidth <= 0 || cardsPerRow <= 0 || cardsPerColumn <= 0) {
+          return { display: 'none' }; // Hide if not ready
+      }
+      const cardWidthPx = mmToPixels(cardWidthMM);
+      const cardHeightPx = mmToPixels(cardHeightMM);
+      const gapPx = mmToPixels(spacing);
+
+      // console.log("Grid Styles (px):", { cardWidthPx, cardHeightPx, gapPx });
+
+      if (![cardWidthPx, cardHeightPx, gapPx].every(v => Number.isFinite(v) && v >= 0)) {
+           console.warn("Invalid pixel values calculated for grid styles");
+           return { display: 'none' };
+      }
+      // Ensure dimensions are positive for grid layout
+      if (cardWidthPx <= 0 || cardHeightPx <= 0) {
+          console.warn("Grid styles: Card width or height in pixels is zero or negative.");
+          return { display: 'none' };
+      }
+
+
+      return {
+          gridTemplateColumns: `repeat(${cardsPerRow}, ${cardWidthPx}px)`,
+          gridTemplateRows: `repeat(${cardsPerColumn}, ${cardHeightPx}px)`,
+          gap: `${gapPx}px`,
+      };
+  }, [containerWidth, cardsPerRow, cardsPerColumn, cardWidthMM, cardHeightMM, spacing, mmToPixels]);
+
+
+  // Component JSX
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-6">
+        <Card className="col-span-1">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">{t("layout.preview")}</h3>
+            </div>
+            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg overflow-hidden">
+              {/* Container for aspect ratio and ref */}
+              <div
+                ref={printRef}
+                className="relative bg-white dark:bg-gray-900 border rounded-lg mx-auto"
+                style={{
+                  width: "100%",
+                  aspectRatio: `${a4Width} / ${a4Height}`,
+                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                  overflow: "hidden",
+                  // Use calculated height if available, otherwise rely on aspect ratio
+                  height: containerWidth > 0 ? `${(containerWidth / a4Width) * a4Height}px` : undefined,
+                  // Add a visual indicator for debugging if width is 0
+                  outline: containerWidth <= 0 ? '2px dashed red' : 'none',
+                }}
+              >
+                {/* Canvas - always present but might be 0x0 initially */}
+                <canvas
+                  ref={canvasRef}
+                  id="print-layout-canvas"
+                  className="absolute top-0 left-0 w-full h-full"
+                  style={{ padding: 0, border: 'none', margin: 0, display: 'block' }}
+                />
+
+                {/* Overlay Grid - Conditionally rendered based on calculated styles */}
+                {overlayStyles.display !== 'none' && gridStyles.display !== 'none' && (
+                  <div
+                    className="absolute top-0 left-0 w-full h-full z-10"
+                    style={overlayStyles}
+                  >
+                    <div
+                      className="grid h-full w-full"
+                      style={gridStyles}
+                    >
+                      {/* Render grid cells */}
+                      {Array(cardsPerRow * cardsPerColumn).fill(0).map((_, index) => (
+                        <div
+                          key={index}
+                          className={`relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-blue-100/30 dark:hover:bg-blue-900/30 ${
+                            selectedCardIndex === index ? "ring-2 ring-gold-500 ring-offset-1 bg-blue-100/50 dark:bg-blue-900/50" : ""
+                          }`}
+                          style={{ pointerEvents: "auto" }}
+                          onClick={() => {
+                            // Ensure index is within bounds of inputRefs
+                            if (index < inputRefs.current.length) {
+                                setSelectedCardIndex(index);
+                                inputRefs.current[index]?.click();
+                            } else {
+                                console.error(`Attempted to click input ref for index ${index}, but only ${inputRefs.current.length} refs exist.`);
+                            }
+                          }}
+                        >
+                          <Input
+                            ref={(el) => {
+                                // Ensure index is valid before assigning ref
+                                if (index < cardsPerRow * cardsPerColumn) {
                                     inputRefs.current[index] = el;
                                 }
                             }}
-                            type="file" accept="image/*" className="hidden"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
                             onChange={(e) => handleFileChange(e, index)}
                           />
+                          {/* Remove button */}
                           {cards[index] && (
                             <Button
-                              variant="destructive" size="icon"
+                              variant="destructive"
+                              size="icon"
                               className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0"
-                              onClick={(e) => { e.stopPropagation(); onCardRemove(index); }}
-                            > <Trash2 className="h-2.5 w-2.5" /> </Button>
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCardRemove(index);
+                              }}
+                            >
+                              <Trash2 className="h-2.5 w-2.5" />
+                            </Button>
                           )}
+                          {/* Index number */}
                           <span className="absolute bottom-0.5 left-0.5 text-xs text-gray-400 dark:text-gray-600">{index + 1}</span>
                         </div>
                       ))}

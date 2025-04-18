@@ -59,6 +59,7 @@ export function IntegratedCardEditor({
 
   // Calculate grid properties (memoized based on inputs)
   const { cardsPerRow, cardsPerColumn, gridWidthMM, gridHeightMM, marginXMM, marginYMM } = useMemo(() => { // Renamed MM variables
+    // Ensure dimensions + spacing are positive
     const effectiveCardWidth = cardWidthMM + spacing;
     const effectiveCardHeight = cardHeightMM + spacing;
     if (effectiveCardWidth <= 0 || effectiveCardHeight <= 0) {
@@ -68,6 +69,8 @@ export function IntegratedCardEditor({
 
     const cpr = Math.floor((a4Width + spacing) / effectiveCardWidth);
     const cpc = Math.floor((a4Height + spacing) / effectiveCardHeight);
+
+    // Ensure cpr and cpc are non-negative
     const validCpr = Math.max(0, cpr);
     const validCpc = Math.max(0, cpc);
 
@@ -76,17 +79,25 @@ export function IntegratedCardEditor({
     const mxMM = (a4Width - gwMM) / 2;
     const myMM = (a4Height - ghMM) / 2;
 
-    // console.log("Grid calculation (MM):", { validCpr, validCpc, gwMM, ghMM, mxMM, myMM });
+    console.log("Grid calculation (MM):", { validCpr, validCpc, gwMM, ghMM, mxMM, myMM });
     return { cardsPerRow: validCpr, cardsPerColumn: validCpc, gridWidthMM: gwMM, gridHeightMM: ghMM, marginXMM: mxMM, marginYMM: myMM };
   }, [a4Width, a4Height, cardWidthMM, cardHeightMM, spacing]);
 
   // mmToPixels depends on containerWidth state
   const mmToPixels = useCallback((mm: number) => {
-    if (containerWidth <= 0 || !Number.isFinite(containerWidth)) return 0;
-    if (!Number.isFinite(mm)) return 0;
+    if (containerWidth <= 0 || !Number.isFinite(containerWidth)) {
+        // console.warn(`mmToPixels called with invalid containerWidth: ${containerWidth}`);
+        return 0;
+    }
+    if (!Number.isFinite(mm)) {
+        console.warn(`mmToPixels called with invalid mm value: ${mm}`);
+        return 0;
+    }
     const scale = containerWidth / a4Width;
-    return mm * scale;
-  }, [a4Width, containerWidth]);
+    const pixelValue = mm * scale;
+    // console.log(`mmToPixels: ${mm}mm -> ${pixelValue}px (scale: ${scale}, containerWidth: ${containerWidth})`);
+    return pixelValue;
+  }, [a4Width, containerWidth]); // Depend on containerWidth state
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
@@ -134,52 +145,24 @@ export function IntegratedCardEditor({
     }
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d", { alpha: false });
-    if (!ctx) {
-        console.error("renderCanvas failed: Could not get 2D context");
-        return;
-    }
-
-    const displayWidth = containerWidth;
-    const displayHeight = (containerWidth / a4Width) * a4Height;
-
-    if (displayWidth <= 0 || displayHeight <= 0 || !Number.isFinite(displayWidth) || !Number.isFinite(displayHeight)) {
-        console.warn("renderCanvas skipped: Invalid calculated canvas dimensions", { displayWidth, displayHeight });
-        return;
-    }
-
-    if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
-        console.log(`Canvas size set to: ${canvas.width}x${canvas.height} based on containerWidth ${containerWidth}`);
-    }
-
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
+    // Ensure cardsPerRow and cardsPerColumn are valid before mapping
     if (cardsPerRow <= 0 || cardsPerColumn <= 0) {
         console.warn("renderCanvas: cardsPerRow or cardsPerColumn is zero or negative, skipping image loading.");
-        return;
+        return; // Avoid unnecessary processing or potential errors
     }
 
-    // console.log(`renderCanvas: Drawing grid (${cardsPerRow}x${cardsPerColumn})`);
-
-    const loadPromises = cards.slice(0, cardsPerRow * cardsPerColumn).map((card, index) => {
+    const loadImages = cards.slice(0, cardsPerRow * cardsPerColumn).map((card, index) => { // Limit map to visible slots
       const row = Math.floor(index / cardsPerRow);
       const col = index % cardsPerRow;
-      const drawXBg = mmToPixels(marginXMM + col * (cardWidthMM + spacing));
-      const drawYBg = mmToPixels(marginYMM + row * (cardHeightMM + spacing));
-      const drawCardWidthBg = mmToPixels(cardWidthMM);
-      const drawCardHeightBg = mmToPixels(cardHeightMM);
-
-      if (drawCardWidthBg > 0 && drawCardHeightBg > 0) {
-          ctx.fillStyle = "#f0f0f0";
-          ctx.fillRect(drawXBg, drawYBg, drawCardWidthBg, drawCardHeightBg);
-      } else {
-          // console.warn(`Card ${index} background skipped: Invalid dimensions`, { drawCardWidthBg, drawCardHeightBg });
-      }
+      const drawXBg = mmToPixels(marginX + col * (width + spacing));
+      const drawYBg = mmToPixels(marginY + row * (height + spacing));
+      const drawCardWidthBg = mmToPixels(width);
+      const drawCardHeightBg = mmToPixels(height);
+      ctx.fillStyle = "#f0f0f0";
+      ctx.fillRect(drawXBg, drawYBg, drawCardWidthBg, drawCardHeightBg);
 
       if (!card || !card.image) return Promise.resolve();
 
@@ -187,14 +170,16 @@ export function IntegratedCardEditor({
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
-          const drawX = drawXBg;
-          const drawY = drawYBg;
-          const drawCardWidth = drawCardWidthBg;
-          const drawCardHeight = drawCardHeightBg;
+          const drawX = mmToPixels(marginX + col * (width + spacing));
+          const drawY = mmToPixels(marginY + row * (height + spacing));
+          const drawCardWidth = mmToPixels(width);
+          const drawCardHeight = mmToPixels(height);
 
+          // Ensure draw dimensions are valid
           if (drawCardWidth <= 0 || drawCardHeight <= 0) {
-              // console.warn(`Skipping image draw for index ${index}: Invalid card dimensions`);
-              resolve(); return;
+              console.warn(`Skipping image draw for index ${index}: Invalid card dimensions`);
+              resolve();
+              return;
           }
 
           ctx.save();
@@ -208,9 +193,11 @@ export function IntegratedCardEditor({
 
           let baseWidth, baseHeight;
           if (imgAspectRatio > cardAspectRatio) {
-            baseWidth = drawCardWidth; baseHeight = baseWidth / imgAspectRatio;
+            baseWidth = drawCardWidth;
+            baseHeight = baseWidth / imgAspectRatio;
           } else {
-            baseHeight = drawCardHeight; baseWidth = baseHeight * imgAspectRatio;
+            baseHeight = drawCardHeight;
+            baseWidth = baseHeight * imgAspectRatio;
           }
 
           const targetWidth = baseWidth * cardScale;
@@ -218,23 +205,32 @@ export function IntegratedCardEditor({
           const imgDrawX = drawX + (drawCardWidth - targetWidth) / 2;
           const imgDrawY = drawY + (drawCardHeight - targetHeight) / 2;
 
-          if (targetWidth > 0 && targetHeight > 0 && Number.isFinite(imgDrawX) && Number.isFinite(imgDrawY)) {
+          // Ensure target dimensions are valid
+          if (targetWidth > 0 && targetHeight > 0) {
               ctx.drawImage(img, imgDrawX, imgDrawY, targetWidth, targetHeight);
           } else {
-              // console.warn(`Skipping image draw for index ${index}: Invalid target dimensions or position`, { targetWidth, targetHeight, imgDrawX, imgDrawY });
+              console.warn(`Skipping image draw for index ${index}: Invalid target dimensions`);
           }
 
           ctx.restore();
           resolve();
         };
-        img.onerror = (err) => {
-          console.error(`Failed to load image for card ${index}:`, card.image, err);
-          const drawX = drawXBg; const drawY = drawYBg;
-          const drawCardWidth = drawCardWidthBg; const drawCardHeight = drawCardHeightBg;
+        img.onerror = () => {
+          console.error("Failed to load image:", card.image);
+          // Draw error indicator
+          const drawX = mmToPixels(marginX + col * (width + spacing));
+          const drawY = mmToPixels(marginY + row * (height + spacing));
+          const drawCardWidth = mmToPixels(width);
+          const drawCardHeight = mmToPixels(height);
           if (drawCardWidth > 0 && drawCardHeight > 0) {
-              ctx.save(); ctx.beginPath(); ctx.rect(drawX, drawY, drawCardWidth, drawCardHeight); ctx.clip();
-              ctx.fillStyle = "rgba(255, 0, 0, 0.5)"; ctx.fillRect(drawX, drawY, drawCardWidth, drawCardHeight);
-              ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "10px sans-serif";
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(drawX, drawY, drawCardWidth, drawCardHeight);
+              ctx.clip();
+              ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+              ctx.fillRect(drawX, drawY, drawCardWidth, drawCardHeight);
+              ctx.fillStyle = "white";
+              ctx.textAlign = "center";
               ctx.fillText("Error", drawX + drawCardWidth / 2, drawY + drawCardHeight / 2);
               ctx.restore();
           }
@@ -244,71 +240,72 @@ export function IntegratedCardEditor({
       });
     });
 
-    Promise.all(loadPromises).then(() => {
-      // console.log("Canvas image loading and drawing complete");
-    }).catch(err => {
-        console.error("Error during image loading/drawing:", err);
+    Promise.all(loadImages).then(() => {
+      console.log("Canvas rendering complete");
     });
-  }, [cards, spacing, cardType, a4Width, a4Height, cardWidthMM, cardHeightMM, marginXMM, marginYMM, cardsPerRow, cardsPerColumn, mmToPixels, containerWidth]);
+  }, [cards, spacing, cardType, a4Width, a4Height, width, height, marginX, marginY, cardsPerRow, cardsPerColumn, mmToPixels, containerWidth]); // Added containerWidth dependency
 
   // useEffect to setup ResizeObserver and update containerWidth
   useEffect(() => {
     const element = printRef.current;
-    if (!element) {
-        console.log("ResizeObserver useEffect: printRef is null, cannot observe.");
-        return;
-    }
-    console.log("ResizeObserver useEffect: Setting up observer for", element);
+    if (!element) return;
 
     let animationFrameId: number | null = null;
 
     const observer = new ResizeObserver(entries => {
-        if (animationFrameId) { cancelAnimationFrame(animationFrameId); }
+        // Use requestAnimationFrame to debounce resize events
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
         animationFrameId = requestAnimationFrame(() => {
             for (let entry of entries) {
                 const newWidth = entry.contentRect.width;
-                // console.log("ResizeObserver callback: newWidth =", newWidth); // Keep this log for debugging
-                if (newWidth > 0 && Number.isFinite(newWidth)) {
+                // Update state only if width is positive and different
+                if (newWidth > 0) {
                     setContainerWidth(prevWidth => {
                         if (newWidth !== prevWidth) {
-                            console.log(`ResizeObserver updating containerWidth from ${prevWidth} to ${newWidth}`);
+                            console.log(`ResizeObserver updating containerWidth to ${newWidth}`);
                             return newWidth;
                         }
-                        return prevWidth;
+                        return prevWidth; // No change needed
                     });
-                } else if (newWidth <= 0) {
-                    // Optional: Handle case where width becomes 0 after being positive
-                    // setContainerWidth(0); // Or keep the last known positive width? Decide based on desired behavior.
-                    console.warn(`ResizeObserver callback: Width became zero or invalid (${newWidth})`);
                 }
             }
         });
     });
 
-    observer.observe(element, { box: 'content-box' });
-    console.log("ResizeObserver useEffect: Observer attached.");
+    observer.observe(element);
 
-    // REMOVED initial check with setTimeout - rely solely on the observer callback
+    // Initial check in case the element already has size on mount
+    const initialWidth = element.clientWidth;
+    if (initialWidth > 0) {
+        setContainerWidth(prevWidth => {
+            if (initialWidth !== prevWidth) {
+                console.log(`Initial check setting containerWidth to ${initialWidth}`);
+                return initialWidth;
+            }
+            return prevWidth;
+        });
+    }
 
     return () => {
-      console.log("ResizeObserver useEffect: Cleaning up observer for", element);
-      if (animationFrameId) { cancelAnimationFrame(animationFrameId); }
-      // Check element existence before unobserving is good practice
-      if (element) { observer.unobserve(element); }
+      if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+      }
+      observer.unobserve(element);
       observer.disconnect();
-      console.log("ResizeObserver useEffect: Observer detached.");
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array: Run only once on mount
+  }, [printRef]); // Only depend on printRef, state updates handled inside
 
-  // useEffect to trigger renderCanvas when containerWidth is ready or renderCanvas definition changes
+  // useEffect to trigger renderCanvas when containerWidth is ready or renderCanvas changes
   useEffect(() => {
-    // Only render if containerWidth is validly set (greater than 0)
+    // Only render if containerWidth is valid
     if (containerWidth > 0) {
-      console.log(`renderCanvas useEffect: Triggering renderCanvas (containerWidth: ${containerWidth})`);
+      console.log("Triggering renderCanvas because containerWidth > 0");
       renderCanvas();
     } else {
-      console.log(`renderCanvas useEffect: Skipping renderCanvas (containerWidth: ${containerWidth})`);
+      console.log("Skipping renderCanvas because containerWidth is 0");
     }
   }, [containerWidth, renderCanvas]); // Depend on containerWidth and the stable renderCanvas
 
@@ -322,13 +319,9 @@ export function IntegratedCardEditor({
     }
   }
 
-  // Export functions (check containerWidth)
+  // Export functions
   const handleExportPDF = async () => {
-    if (!canvasRef.current || containerWidth <= 0) {
-        console.warn("PDF Export cancelled: Canvas not ready or containerWidth invalid");
-        toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
-        return;
-    }
+    if (!canvasRef.current || containerWidth === 0) return; // Check containerWidth
     setIsExporting(true);
     try {
       if (exportQuality === "ultra") {
@@ -336,7 +329,7 @@ export function IntegratedCardEditor({
       }
       const options = {
         cards, spacing, cardType, cmykConversion, dpi: getDpiForQuality(), canvas: canvasRef.current,
-        dimensions: { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn },
+        dimensions: { a4Width, a4Height, cardWidth: width, cardHeight: height, marginX, marginY, cardsPerRow, cardsPerColumn },
       };
       const pdfBlob = await generatePDF(options);
       downloadFile(pdfBlob, "tcg-proxy-cards.pdf");
@@ -350,11 +343,7 @@ export function IntegratedCardEditor({
   }
 
   const handleExportPNG = async () => {
-     if (!canvasRef.current || containerWidth <= 0) {
-        console.warn("PNG Export cancelled: Canvas not ready or containerWidth invalid");
-        toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
-        return;
-     }
+     if (!canvasRef.current || containerWidth === 0) return; // Check containerWidth
     setIsExporting(true);
     try {
       if (exportQuality === "ultra") {
@@ -362,7 +351,7 @@ export function IntegratedCardEditor({
       }
        const options = {
         cards, spacing, cardType, cmykConversion, dpi: getDpiForQuality(), canvas: canvasRef.current,
-        dimensions: { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn },
+        dimensions: { a4Width, a4Height, cardWidth: width, cardHeight: height, marginX, marginY, cardsPerRow, cardsPerColumn },
       };
       const pngBlob = await generatePNG(options);
       downloadFile(pngBlob, "tcg-proxy-cards.png");
@@ -387,35 +376,6 @@ export function IntegratedCardEditor({
     URL.revokeObjectURL(url);
   }
 
-  // Calculate pixel values for styles (memoized)
-  const overlayStyles = useMemo(() => {
-      if (containerWidth <= 0 || cardsPerRow <= 0 || cardsPerColumn <= 0) return { display: 'none' };
-      const paddingLeftPx = mmToPixels(marginXMM);
-      const paddingTopPx = mmToPixels(marginYMM);
-      const gridWidthPx = mmToPixels(gridWidthMM);
-      const gridHeightPx = mmToPixels(gridHeightMM);
-      if (![paddingLeftPx, paddingTopPx, gridWidthPx, gridHeightPx].every(Number.isFinite)) return { display: 'none' };
-      return {
-          paddingLeft: `${paddingLeftPx}px`, paddingTop: `${paddingTopPx}px`,
-          width: `${gridWidthPx}px`, height: `${gridHeightPx}px`,
-          pointerEvents: "none" as const,
-      };
-  }, [containerWidth, cardsPerRow, cardsPerColumn, marginXMM, marginYMM, gridWidthMM, gridHeightMM, mmToPixels]);
-
-  const gridStyles = useMemo(() => {
-      if (containerWidth <= 0 || cardsPerRow <= 0 || cardsPerColumn <= 0) return { display: 'none' };
-      const cardWidthPx = mmToPixels(cardWidthMM);
-      const cardHeightPx = mmToPixels(cardHeightMM);
-      const gapPx = mmToPixels(spacing);
-      if (![cardWidthPx, cardHeightPx, gapPx].every(v => Number.isFinite(v) && v >= 0)) return { display: 'none' };
-      if (cardWidthPx <= 0 || cardHeightPx <= 0) return { display: 'none' };
-      return {
-          gridTemplateColumns: `repeat(${cardsPerRow}, ${cardWidthPx}px)`,
-          gridTemplateRows: `repeat(${cardsPerColumn}, ${cardHeightPx}px)`,
-          gap: `${gapPx}px`,
-      };
-  }, [containerWidth, cardsPerRow, cardsPerColumn, cardWidthMM, cardHeightMM, spacing, mmToPixels]);
-
   // Component JSX
   return (
     <div className="space-y-6">
@@ -432,10 +392,12 @@ export function IntegratedCardEditor({
                 style={{
                   width: "100%", aspectRatio: `${a4Width} / ${a4Height}`,
                   boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)", overflow: "hidden",
-                  height: containerWidth > 0 ? `${(containerWidth / a4Width) * a4Height}px` : undefined,
-                  outline: containerWidth <= 0 ? '2px dashed red' : 'none', // Debug outline
+                  // Ensure height is determined by aspect ratio, add min-height for initial observation
+                  height: containerWidth > 0 ? `${(containerWidth / a4Width) * a4Height}px` : 'auto',
+                  minHeight: '100px', // Helps ensure the observer can attach and measure initially
                 }}
               >
+                {/* Canvas for drawing */}
                 <canvas
                   ref={canvasRef}
                   id="print-layout-canvas"
@@ -443,13 +405,27 @@ export function IntegratedCardEditor({
                   style={{ padding: 0, border: 'none', margin: 0, display: 'block' }}
                 />
 
-                {/* Overlay Grid - Conditionally rendered */}
-                {overlayStyles.display !== 'none' && gridStyles.display !== 'none' && (
+                {/* Overlay Grid - Render only when containerWidth is known and valid grid exists */}
+                {containerWidth > 0 && cardsPerRow > 0 && cardsPerColumn > 0 && (
                   <div
                     className="absolute top-0 left-0 w-full h-full z-10"
-                    style={overlayStyles}
+                    style={{
+                      paddingLeft: `${mmToPixels(marginX)}px`,
+                      paddingTop: `${mmToPixels(marginY)}px`,
+                      width: `${mmToPixels(gridWidth)}px`,
+                      height: `${mmToPixels(gridHeight)}px`,
+                      pointerEvents: "none",
+                    }}
                   >
-                    <div className="grid h-full w-full" style={gridStyles}>
+                    <div
+                      className="grid h-full w-full"
+                      style={{
+                        gridTemplateColumns: `repeat(${cardsPerRow}, ${mmToPixels(width)}px)`,
+                        gridTemplateRows: `repeat(${cardsPerColumn}, ${mmToPixels(height)}px)`,
+                        gap: `${mmToPixels(spacing)}px`,
+                      }}
+                    >
+                      {/* Limit map to the actual number of grid cells */}
                       {Array(cardsPerRow * cardsPerColumn).fill(0).map((_, index) => (
                         <div
                           key={index}
@@ -458,32 +434,29 @@ export function IntegratedCardEditor({
                           }`}
                           style={{ pointerEvents: "auto" }}
                           onClick={() => {
-                            // Ensure index is within bounds before accessing ref
-                            if (index < cardsPerRow * cardsPerColumn) {
-                                setSelectedCardIndex(index);
-                                inputRefs.current[index]?.click();
-                            } else {
-                                console.error(`Grid click error: Index ${index} out of bounds for ${cardsPerRow * cardsPerColumn} cells.`);
-                            }
+                            setSelectedCardIndex(index);
+                            inputRefs.current[index]?.click();
                           }}
                         >
                           <Input
-                            ref={(el) => {
-                                // Dynamically size inputRefs array if needed, or ensure it's pre-sized
-                                // For simplicity, let's assume it's large enough or handle potential undefined access
-                                if (index < cardsPerRow * cardsPerColumn) { // Check index validity
-                                    inputRefs.current[index] = el;
-                                }
-                            }}
-                            type="file" accept="image/*" className="hidden"
+                            ref={(el) => { inputRefs.current[index] = el; }}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
                             onChange={(e) => handleFileChange(e, index)}
                           />
                           {cards[index] && (
                             <Button
-                              variant="destructive" size="icon"
+                              variant="destructive"
+                              size="icon"
                               className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0"
-                              onClick={(e) => { e.stopPropagation(); onCardRemove(index); }}
-                            > <Trash2 className="h-2.5 w-2.5" /> </Button>
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCardRemove(index);
+                              }}
+                            >
+                              <Trash2 className="h-2.5 w-2.5" />
+                            </Button>
                           )}
                           <span className="absolute bottom-0.5 left-0.5 text-xs text-gray-400 dark:text-gray-600">{index + 1}</span>
                         </div>
@@ -491,12 +464,6 @@ export function IntegratedCardEditor({
                     </div>
                   </div>
                 )}
-                 {/* Loading/Placeholder indicator */}
-                 {containerWidth <= 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200/50 dark:bg-gray-700/50 z-20">
-                        <p className="text-gray-500 dark:text-gray-400">レイアウトを計算中...</p>
-                    </div>
-                 )}
               </div>
             </div>
 
@@ -521,10 +488,10 @@ export function IntegratedCardEditor({
                   <Button variant="outline" onClick={() => window.print()} className="flex-1 sm:flex-none sm:w-28">
                     <Printer className="mr-2 h-4 w-4" /> {t("action.print")}
                   </Button>
-                  <Button variant="outline" onClick={handleExportPNG} disabled={isExporting || containerWidth <= 0} className="flex-1 sm:flex-none sm:w-28">
+                  <Button variant="outline" onClick={handleExportPNG} disabled={isExporting || containerWidth === 0} className="flex-1 sm:flex-none sm:w-28">
                     <Download className="mr-2 h-4 w-4" /> PNG
                   </Button>
-                  <Button className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28" onClick={handleExportPDF} disabled={isExporting || containerWidth <= 0}>
+                  <Button className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28" onClick={handleExportPDF} disabled={isExporting || containerWidth === 0}>
                     <Download className="mr-2 h-4 w-4" /> PDF
                   </Button>
                 </div>
