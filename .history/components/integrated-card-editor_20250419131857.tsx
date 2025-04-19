@@ -104,16 +104,12 @@ export function IntegratedCardEditor({
       isLongPressing.current = true;
       console.log(`Long press detected on index: ${index}`);
       // 長押し時は常に単一選択として扱うか、複数選択を維持するか？
-      // 現状: 複数選択状態でも、長押ししたスロットの input をトリガー
-      // → 複数選択状態で長押しした場合も、複数選択用の input (-1) をトリガーするように変更
-      if (selectedCardIndices.length > 1 && selectedCardIndices.includes(index)) {
         console.log("Triggering file input for multiple indices:", selectedCardIndices);
-        inputRefs.current[-1]?.click(); // 複数選択用 input をトリガー
+        inputRefs.current[-1]?.click();
       } else {
-        // 単一選択、または複数選択されていないスロットを長押しした場合
         console.log(`Triggering file input for single index: ${index}`);
-        setSelectedCardIndices([index]); // 長押ししたスロットのみを選択状態にする
-        inputRefs.current[index]?.click(); // 個別 input をトリガー
+        setSelectedCardIndices([index]);
+        inputRefs.current[index]?.click();
       }
     }, LONG_PRESS_DURATION);
   };
@@ -128,25 +124,21 @@ export function IntegratedCardEditor({
       setSelectedCardIndices(prevIndices => {
         const currentIndex = prevIndices.indexOf(index);
         if (currentIndex > -1) {
-          // すでに選択されている場合は選択解除
           return [...prevIndices.slice(0, currentIndex), ...prevIndices.slice(currentIndex + 1)];
         } else {
-          // 選択されていない場合は追加
           return [...prevIndices, index];
         }
       });
     }
-    // 長押し後の PointerUp では isLongPressing が true なので、ここでは何もしない
-    isLongPressing.current = false; // フラグをリセット
+    isLongPressing.current = false;
   };
 
-  const handlePointerLeave = (index: number) => { // index を受け取るように変更
+  const handlePointerLeave = () => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
-      console.log(`Pointer left index ${index}, timer cleared.`);
+      console.log("Pointer left, timer cleared.");
     }
-    // isLongPressing.current = false; // Leave しただけでは長押し状態は解除しない方が自然かも
   };
   // --- 長押し・タップ処理ここまで ---
 
@@ -154,18 +146,14 @@ export function IntegratedCardEditor({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
     if (file) {
-      // index が -1 の場合は複数選択用の input からのイベント
       if (index === -1 && selectedCardIndices.length > 0) {
         console.log("Processing image for multiple indices:", selectedCardIndices);
         processImage(file, selectedCardIndices);
       } else if (index >= 0) {
-        // index が 0 以上の場合は個別の input からのイベント (単一選択 or 長押し)
-        // 長押しで単一選択になった場合もここに来る
         console.log(`Processing image for single index: ${index}`);
-        processImage(file, [index]); // 常に配列で渡す
+        processImage(file, [index]);
       }
     }
-    // Reset input value to allow selecting the same file again
     e.target.value = "";
   };
 
@@ -200,19 +188,19 @@ export function IntegratedCardEditor({
         } else {
           toast({ title: t("toast.imageAdded"), description: `画像を ${indices.length} 個のスロットに追加しました。` });
         }
-        setSelectedCardIndices([]); // 処理後、選択状態をリセット
+        setSelectedCardIndices([]);
         setIsProcessingImage(false);
       };
       img.onerror = () => {
         setIsProcessingImage(false);
-        setSelectedCardIndices([]); // エラー時もリセット
+        setSelectedCardIndices([]);
         toast({ title: "画像読み込みエラー", description: "画像の読み込みに失敗しました。", variant: "destructive" });
       };
       img.src = event.target?.result as string;
     };
     reader.onerror = () => {
       setIsProcessingImage(false);
-      setSelectedCardIndices([]); // エラー時もリセット
+      setSelectedCardIndices([]);
       toast({ title: "ファイル読み込みエラー", description: "ファイルの読み込みに失敗しました。", variant: "destructive" });
     };
     reader.readAsDataURL(file);
@@ -254,7 +242,7 @@ export function IntegratedCardEditor({
       const drawCardHeightBg = mmToPixels(cardHeightMM);
 
       if (drawCardWidthBg > 0 && drawCardHeightBg > 0) {
-          ctx.fillStyle = "#f0f0f0"; // 背景色を少し薄く
+          ctx.fillStyle = "#f0f0f0";
           ctx.fillRect(drawXBg, drawYBg, drawCardWidthBg, drawCardHeightBg);
       }
 
@@ -280,23 +268,15 @@ export function IntegratedCardEditor({
           const cardAspectRatio = drawCardWidth / drawCardHeight;
           const cardScale = card.scale || 1;
           let baseWidth, baseHeight;
-          // 画像をカードに合わせて中央揃えで表示 (Aspect Fill)
           if (imgAspectRatio > cardAspectRatio) {
-             baseHeight = drawCardHeight;
-             baseWidth = baseHeight * imgAspectRatio;
+            baseWidth = drawCardWidth; baseHeight = baseWidth / imgAspectRatio;
           } else {
-             baseWidth = drawCardWidth;
-             baseHeight = baseWidth / imgAspectRatio;
+            baseHeight = drawCardHeight; baseWidth = baseHeight * imgAspectRatio;
           }
           const targetWidth = baseWidth * cardScale;
           const targetHeight = baseHeight * cardScale;
-          // 画像の位置調整 (position を考慮)
-          const cardPosition = card.position || { x: 0, y: 0 };
-          const offsetX = (drawCardWidth - targetWidth) / 2 + cardPosition.x * (drawCardWidth / 2); // position.x は -1 から 1 の範囲を想定
-          const offsetY = (drawCardHeight - targetHeight) / 2 + cardPosition.y * (drawCardHeight / 2); // position.y は -1 から 1 の範囲を想定
-          const imgDrawX = drawX + offsetX;
-          const imgDrawY = drawY + offsetY;
-
+          const imgDrawX = drawX + (drawCardWidth - targetWidth) / 2;
+          const imgDrawY = drawY + (drawCardHeight - targetHeight) / 2;
           if (targetWidth > 0 && targetHeight > 0 && Number.isFinite(imgDrawX) && Number.isFinite(imgDrawY)) {
               ctx.drawImage(img, imgDrawX, imgDrawY, targetWidth, targetHeight);
           }
@@ -308,7 +288,7 @@ export function IntegratedCardEditor({
           const drawX = drawXBg; const drawY = drawYBg;
           const drawCardWidth = drawCardWidthBg; const drawCardHeight = drawCardHeightBg;
           if (drawCardWidth > 0 && drawCardHeight > 0) {
-              ctx.save(); ctx.beginPath(); ctx.rect(drawX, drawY, drawCardWidth, drawCardHeight); ctx.clip();
+              ctx.save(); ctx.beginPath(); ctx.rect(drawX, drawY, drawCardWidth, drawCardHeight); ctx.clip(); // 修正: カンマ追加
               ctx.fillStyle = "rgba(255, 0, 0, 0.5)"; ctx.fillRect(drawX, drawY, drawCardWidth, drawCardHeight);
               ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "10px sans-serif";
               ctx.fillText("Error", drawX + drawCardWidth / 2, drawY + drawCardHeight / 2);
@@ -366,7 +346,7 @@ export function IntegratedCardEditor({
   }, [containerWidth, renderCanvas]);
 
   // Get DPI for export
-  const getDpiForQuality = useCallback(() => {
+  const getDpiForQuality = useCallback(() => { // 修正: コンポーネント関数の直下に移動
     switch (exportQuality) {
       case "standard": return 300;
       case "high": return 450;
@@ -449,7 +429,7 @@ export function IntegratedCardEditor({
       return {
           paddingLeft: `${paddingLeftPx}px`, paddingTop: `${paddingTopPx}px`,
           width: `${gridWidthPx}px`, height: `${gridHeightPx}px`,
-          pointerEvents: "none" as const, // Overlay自体はイベントを受け取らない
+          pointerEvents: "none" as const,
       };
   }, [containerWidth, cardsPerRow, cardsPerColumn, marginXMM, marginYMM, gridWidthMM, gridHeightMM, mmToPixels]);
 
@@ -465,7 +445,7 @@ export function IntegratedCardEditor({
           gridTemplateRows: `repeat(${cardsPerColumn}, ${cardHeightPx}px)`,
           gap: `${gapPx}px`,
       };
-  }, [containerWidth, cardsPerRow, cardsPerColumn, cardWidthMM, cardHeightMM, spacing, mmToPixels]);
+  }, [containerWidth, cardsPerRow, cardsPerColumn, cardWidthMM, cardHeightMM, spacing, mmToPixels]); // 修正: セミコロンを追加
 
   // Component JSX
   return (
@@ -495,11 +475,10 @@ export function IntegratedCardEditor({
                 />
                 {overlayStyles.display !== 'none' && gridStyles.display !== 'none' && (
                   <div
-                    className="absolute top-0 left-0 w-full h-full z-10" // z-10 を追加
+                    className="absolute top-0 left-0 w-full h-full z-10"
                     style={overlayStyles}
                   >
                     <div className="grid h-full w-full" style={gridStyles}>
-                      {/* 複数選択用の隠し Input */}
                       <Input
                         ref={(el) => { inputRefs.current[-1] = el; }}
                         type="file" accept="image/*" className="hidden"
@@ -509,15 +488,14 @@ export function IntegratedCardEditor({
                         <div
                           key={index}
                           className={cn(
-                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10", // ホバー色と透明度を調整
-                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
+                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-blue-100/30 dark:hover:bg-blue-900/30",
+                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-blue-100/50 dark:bg-blue-900/50" : ""
                           )}
-                          style={{ pointerEvents: "auto", touchAction: 'none' }} // pointerEvents: "auto" を明示
+                          style={{ pointerEvents: "auto", touchAction: 'none' }}
                           onPointerDown={() => handlePointerDown(index)}
                           onPointerUp={() => handlePointerUp(index)}
-                          onPointerLeave={() => handlePointerLeave(index)} // index を渡す
+                          onPointerLeave={handlePointerLeave}
                         >
-                          {/* 個別の隠し Input */}
                           <Input
                             ref={(el) => {
                                 if (index >= 0 && index < (cardsPerRow * cardsPerColumn)) {
@@ -527,20 +505,18 @@ export function IntegratedCardEditor({
                             type="file" accept="image/*" className="hidden"
                             onChange={(e) => handleFileChange(e, index)}
                           />
-                          {/* 削除ボタン */}
                           {cards[index] && (
                             <Button
                               variant="destructive" size="icon"
-                              className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0 pointer-events-auto" // z-20 を追加
+                              className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0 pointer-events-auto"
                               onClick={(e) => {
-                                e.stopPropagation(); // 親要素へのイベント伝播を停止
+                                e.stopPropagation();
                                 onCardRemove(index);
                                 setSelectedCardIndices(prev => prev.filter(i => i !== index));
                               }}
                             > <Trash2 className="h-2.5 w-2.5" /> </Button>
                           )}
-                          {/* スロット番号 */}
-                          <span className="absolute bottom-0.5 left-0.5 text-xs text-gray-400 dark:text-gray-600 pointer-events-none select-none">{index + 1}</span> {/* pointer-events-none と select-none を追加 */}
+                          <span className="absolute bottom-0.5 left-0.5 text-xs text-gray-400 dark:text-gray-600">{index + 1}</span>
                         </div>
                       ))}
                     </div>

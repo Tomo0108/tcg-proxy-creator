@@ -509,8 +509,8 @@ export function IntegratedCardEditor({
                         <div
                           key={index}
                           className={cn(
-                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10", // ホバー色と透明度を調整
-                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
+                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-blue-100/30 dark:hover:bg-blue-900/30",
+                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-blue-100/50 dark:bg-blue-900/50" : ""
                           )}
                           style={{ pointerEvents: "auto", touchAction: 'none' }} // pointerEvents: "auto" を明示
                           onPointerDown={() => handlePointerDown(index)}
@@ -521,30 +521,6 @@ export function IntegratedCardEditor({
                           <Input
                             ref={(el) => {
                                 if (index >= 0 && index < (cardsPerRow * cardsPerColumn)) {
-                                    inputRefs.current[index] = el;
-                                }
-                            }}
-                            type="file" accept="image/*" className="hidden"
-                            onChange={(e) => handleFileChange(e, index)}
-                          />
-                          {/* 削除ボタン */}
-                          {cards[index] && (
-                            <Button
-                              variant="destructive" size="icon"
-                              className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0 pointer-events-auto" // z-20 を追加
-                              onClick={(e) => {
-                                e.stopPropagation(); // 親要素へのイベント伝播を停止
-                                onCardRemove(index);
-                                setSelectedCardIndices(prev => prev.filter(i => i !== index));
-                              }}
-                            > <Trash2 className="h-2.5 w-2.5" /> </Button>
-                          )}
-                          {/* スロット番号 */}
-                          <span className="absolute bottom-0.5 left-0.5 text-xs text-gray-400 dark:text-gray-600 pointer-events-none select-none">{index + 1}</span> {/* pointer-events-none と select-none を追加 */}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 )}
                  {containerWidth <= 0 && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-200/50 dark:bg-gray-700/50 z-20">

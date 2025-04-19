@@ -426,30 +426,10 @@ export function IntegratedCardEditor({
     }
   }
 
-  // File download helper
-  const downloadFile = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  // Calculate pixel values for styles (memoized)
-  const overlayStyles = useMemo(() => {
-      if (containerWidth <= 0 || cardsPerRow <= 0 || cardsPerColumn <= 0) return { display: 'none' };
-      const paddingLeftPx = mmToPixels(marginXMM);
-      const paddingTopPx = mmToPixels(marginYMM);
-      const gridWidthPx = mmToPixels(gridWidthMM);
-      const gridHeightPx = mmToPixels(gridHeightMM);
-      if (![paddingLeftPx, paddingTopPx, gridWidthPx, gridHeightPx].every(Number.isFinite)) return { display: 'none' };
       return {
           paddingLeft: `${paddingLeftPx}px`, paddingTop: `${paddingTopPx}px`,
           width: `${gridWidthPx}px`, height: `${gridHeightPx}px`,
-          pointerEvents: "none" as const, // Overlay自体はイベントを受け取らない
+          pointerEvents: "none" as const,
       };
   }, [containerWidth, cardsPerRow, cardsPerColumn, marginXMM, marginYMM, gridWidthMM, gridHeightMM, mmToPixels]);
 
@@ -465,7 +445,7 @@ export function IntegratedCardEditor({
           gridTemplateRows: `repeat(${cardsPerColumn}, ${cardHeightPx}px)`,
           gap: `${gapPx}px`,
       };
-  }, [containerWidth, cardsPerRow, cardsPerColumn, cardWidthMM, cardHeightMM, spacing, mmToPixels]);
+  }, [containerWidth, cardsPerRow, cardsPerColumn, cardWidthMM, cardHeightMM, spacing, mmToPixels]); // 修正: セミコロンを追加
 
   // Component JSX
   return (
@@ -495,11 +475,10 @@ export function IntegratedCardEditor({
                 />
                 {overlayStyles.display !== 'none' && gridStyles.display !== 'none' && (
                   <div
-                    className="absolute top-0 left-0 w-full h-full z-10" // z-10 を追加
+                    className="absolute top-0 left-0 w-full h-full z-10"
                     style={overlayStyles}
                   >
                     <div className="grid h-full w-full" style={gridStyles}>
-                      {/* 複数選択用の隠し Input */}
                       <Input
                         ref={(el) => { inputRefs.current[-1] = el; }}
                         type="file" accept="image/*" className="hidden"
@@ -509,15 +488,14 @@ export function IntegratedCardEditor({
                         <div
                           key={index}
                           className={cn(
-                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10", // ホバー色と透明度を調整
-                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
+                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-blue-100/30 dark:hover:bg-blue-900/30",
+                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-blue-100/50 dark:bg-blue-900/50" : ""
                           )}
-                          style={{ pointerEvents: "auto", touchAction: 'none' }} // pointerEvents: "auto" を明示
+                          style={{ pointerEvents: "auto", touchAction: 'none' }}
                           onPointerDown={() => handlePointerDown(index)}
                           onPointerUp={() => handlePointerUp(index)}
-                          onPointerLeave={() => handlePointerLeave(index)} // index を渡す
+                          onPointerLeave={handlePointerLeave}
                         >
-                          {/* 個別の隠し Input */}
                           <Input
                             ref={(el) => {
                                 if (index >= 0 && index < (cardsPerRow * cardsPerColumn)) {
@@ -527,20 +505,18 @@ export function IntegratedCardEditor({
                             type="file" accept="image/*" className="hidden"
                             onChange={(e) => handleFileChange(e, index)}
                           />
-                          {/* 削除ボタン */}
                           {cards[index] && (
                             <Button
                               variant="destructive" size="icon"
-                              className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0 pointer-events-auto" // z-20 を追加
+                              className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0 pointer-events-auto"
                               onClick={(e) => {
-                                e.stopPropagation(); // 親要素へのイベント伝播を停止
+                                e.stopPropagation();
                                 onCardRemove(index);
                                 setSelectedCardIndices(prev => prev.filter(i => i !== index));
                               }}
                             > <Trash2 className="h-2.5 w-2.5" /> </Button>
                           )}
-                          {/* スロット番号 */}
-                          <span className="absolute bottom-0.5 left-0.5 text-xs text-gray-400 dark:text-gray-600 pointer-events-none select-none">{index + 1}</span> {/* pointer-events-none と select-none を追加 */}
+                          <span className="absolute bottom-0.5 left-0.5 text-xs text-gray-400 dark:text-gray-600">{index + 1}</span>
                         </div>
                       ))}
                     </div>

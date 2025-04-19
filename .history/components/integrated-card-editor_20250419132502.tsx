@@ -574,3 +574,42 @@ export function IntegratedCardEditor({
     </div>
   );
 }
+
+</final_file_content>
+
+IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.<environment_details>
+# VSCode Visible Files
+components/integrated-card-editor.tsx
+
+# VSCode Open Tabs
+tsconfig.json
+lib/pdf-generator.ts
+ref_material/tcg-proxy-cards (20).png
+ref_material/2025-04-19005028.png
+lib/cmyk-conversion.ts
+public/fonts/Melonano_Ver.1.0.ttf
+public/fonts/851Gkktt_005.ttf
+public/fonts/x16y32pxGridGazer.ttf
+app/globals.css
+public/logo/proxy_creator_logo.png
+app/layout.tsx
+lib/i18n.ts
+components/language-switcher.tsx
+app/create/page.tsx
+components/theme-toggle.tsx
+components/header.tsx
+components/integrated-card-editor.tsx
+
+# Recently Modified Files
+These files have been modified since you last accessed them (file was just edited so you may need to re-read it before editing):
+components/integrated-card-editor.tsx
+
+# Current Time
+2025/4/19 午後1:25:07 (Asia/Tokyo, UTC+9:00)
+
+# Context Window Usage
+16,002 / 63.83K tokens used (25%)
+
+# Current Mode
+ACT MODE
+</environment_details>

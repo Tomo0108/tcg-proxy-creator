@@ -509,8 +509,8 @@ export function IntegratedCardEditor({
                         <div
                           key={index}
                           className={cn(
-                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10", // ホバー色と透明度を調整
-                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
+                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-100/30 dark:hover:bg-yellow-900/30", // ホバー色を黄色系に変更
+                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-100/50 dark:bg-yellow-900/50" : "" // 背景色を黄色系に変更
                           )}
                           style={{ pointerEvents: "auto", touchAction: 'none' }} // pointerEvents: "auto" を明示
                           onPointerDown={() => handlePointerDown(index)}
