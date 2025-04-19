@@ -568,9 +568,9 @@ export function IntegratedCardEditor({
                   size="lg" // 少し大きめのボタンに
                 >
                   <Upload className="mr-2 h-5 w-5" />
-                  {/* 選択中のスロット数を表示 (t関数を1引数で呼び出すように修正) */}
+                  {/* 選択中のスロット数を表示 */}
                   {selectedCardIndices.length > 0
-                    ? `${t("action.selectImage")} (${selectedCardIndices.length} ${selectedCardIndices.length === 1 ? t("slotsSelected_one") : t("slotsSelected_other")})`
+                    ? `${t("action.selectImage")} (${selectedCardIndices.length} ${t("slotsSelected", { count: selectedCardIndices.length })})`
                     : t("action.selectSlotFirst") /* スロット未選択時のテキスト */
                   }
                 </Button>

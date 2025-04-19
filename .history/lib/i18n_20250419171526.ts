@@ -310,11 +310,30 @@ export const useLanguageStore = create<LanguageState>((set) => ({
 export function useTranslation() {
   const { locale, setLocale } = useLanguageStore()
 
-  // t 関数を元のシンプルな実装に戻す
-  const t = (key: string): string => {
-    if (translations[key]) {
-      return translations[key][locale]
+  // t 関数を拡張して count オプションをサポート
+  const t = (key: string, options?: { count?: number }): string => {
+    let finalKey = key;
+    // count オプションがある場合、複数形キーを試す
+    if (options?.count !== undefined) {
+      if (options.count === 1) {
+        finalKey = `${key}_one`; // 単数形キー
+      } else {
+        finalKey = `${key}_other`; // 複数形キー
+      }
+      // 複数形キーが存在しない場合は元のキーにフォールバック
+      if (!translations[finalKey]) {
+        finalKey = key;
+      }
     }
+
+    if (translations[finalKey]) {
+      return translations[finalKey][locale];
+    }
+    // 元のキーでも見つからない場合
+    if (translations[key]) {
+        return translations[key][locale];
+    }
+
     console.warn(`Translation missing for key: ${key}`)
     return key
   }
