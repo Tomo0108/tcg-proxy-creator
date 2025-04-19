@@ -68,12 +68,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-      {/* Add a div to mask the footer area */}
-      <div
-        className="fixed bottom-0 left-0 w-full h-16 bg-background z-0" // Adjust height (h-16 = 4rem = 64px) as needed
-        aria-hidden="true" // Accessibility: Hide decorative element
-      />
-      <footer className="border-t py-6 relative z-10 bg-background"> {/* Ensure footer is above mask and has background */}
+      <footer className="border-t py-6">
         <div className="container flex flex-col items-center justify-between gap-4 px-4 md:flex-row md:px-6">
           <p className="text-sm text-muted-foreground">{t("footer.copyright")}</p>
           <div className="flex items-center gap-4">

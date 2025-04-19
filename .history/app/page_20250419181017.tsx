@@ -3,20 +3,17 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, ImageIcon, Printer, Save } from "lucide-react";
-import { Header } from "@/components/header";
-import { useTranslation } from "@/lib/i18n";
-import { FallingCardsCanvas } from "@/components/FallingCardsCanvas"; // Import the canvas component
+import { ArrowRight, ImageIcon, Printer, Save } from "lucide-react"
+import { Header } from "@/components/header"
+import { useTranslation } from "@/lib/i18n"
 
 export default function Home() {
   const { t } = useTranslation()
 
   return (
     <div className="flex min-h-screen flex-col">
-      <FallingCardsCanvas /> {/* Add the canvas component here */}
       <Header />
-      {/* Add relative z-10 to ensure content is above the canvas */}
-      <main className="flex-1 relative z-10">
+      <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
@@ -68,12 +65,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-      {/* Add a div to mask the footer area */}
-      <div
-        className="fixed bottom-0 left-0 w-full h-16 bg-background z-0" // Adjust height (h-16 = 4rem = 64px) as needed
-        aria-hidden="true" // Accessibility: Hide decorative element
-      />
-      <footer className="border-t py-6 relative z-10 bg-background"> {/* Ensure footer is above mask and has background */}
+      <footer className="border-t py-6">
         <div className="container flex flex-col items-center justify-between gap-4 px-4 md:flex-row md:px-6">
           <p className="text-sm text-muted-foreground">{t("footer.copyright")}</p>
           <div className="flex items-center gap-4">
