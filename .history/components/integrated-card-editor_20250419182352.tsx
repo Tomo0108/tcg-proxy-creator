@@ -43,10 +43,10 @@ export function IntegratedCardEditor({
 
   // Refs
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null); // 新しいファイル入力用の Ref
   const printRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const longPressTimer = useRef<NodeJS.Timeout | null>(null); // 長押しタイマー用 Ref
-  const isLongPressing = useRef<boolean>(false); // 長押し判定フラグ用 Ref
 
   // State for container width
   const [containerWidth, setContainerWidth] = useState(0);
@@ -94,9 +94,7 @@ export function IntegratedCardEditor({
   }, [a4Width, containerWidth]);
 
   // --- 長押し・タップ処理 ---
-  // イベントオブジェクトを受け取るように変更 (e: React.TouchEvent)
-  const handlePointerDown = (e: React.TouchEvent, index: number) => {
-    e.preventDefault(); // デフォルトのタッチ動作 (テキスト選択、コピーメニュー等) を防ぐ
+  const handlePointerDown = (index: number) => {
     isLongPressing.current = false;
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -515,10 +513,9 @@ export function IntegratedCardEditor({
                             selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
                           )}
                           style={{ pointerEvents: "auto", touchAction: 'none' }} // pointerEvents: "auto" を明示
-                          // イベントオブジェクト (e) を handlePointerDown に渡す
-                          onTouchStart={(e) => handlePointerDown(e, index)}
-                          onTouchEnd={() => handlePointerUp(index)}
-                          onTouchCancel={() => handlePointerLeave(index)}
+                          onPointerDown={() => handlePointerDown(index)} // Use PointerDown
+                          onPointerUp={() => handlePointerUp(index)}     // Use PointerUp
+                          onPointerLeave={() => handlePointerLeave(index)} // Use PointerLeave
                           onContextMenu={(e) => e.preventDefault()} // コンテキストメニューを無効化
                         >
                           {/* 個別の隠し Input */}

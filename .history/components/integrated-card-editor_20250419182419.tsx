@@ -43,10 +43,12 @@ export function IntegratedCardEditor({
 
   // Refs
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null); // 新しいファイル入力用の Ref
   const printRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const longPressTimer = useRef<NodeJS.Timeout | null>(null); // 長押しタイマー用 Ref
   const isLongPressing = useRef<boolean>(false); // 長押し判定フラグ用 Ref
+  const uploadTargetIndexRef = useRef<number | null>(null); // アップロードボタンの対象インデックス用 Ref
 
   // State for container width
   const [containerWidth, setContainerWidth] = useState(0);
@@ -94,9 +96,7 @@ export function IntegratedCardEditor({
   }, [a4Width, containerWidth]);
 
   // --- 長押し・タップ処理 ---
-  // イベントオブジェクトを受け取るように変更 (e: React.TouchEvent)
-  const handlePointerDown = (e: React.TouchEvent, index: number) => {
-    e.preventDefault(); // デフォルトのタッチ動作 (テキスト選択、コピーメニュー等) を防ぐ
+  const handlePointerDown = (index: number) => {
     isLongPressing.current = false;
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -220,6 +220,49 @@ export function IntegratedCardEditor({
     reader.readAsDataURL(file);
   }, [onCardUpdate, cardType, t, cardsPerRow, cardsPerColumn]);
 
+
+  // Handle file selection for the dedicated upload button
+  const handleUploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const targetIndex = uploadTargetIndexRef.current;
+    if (file && targetIndex !== null && targetIndex >= 0) {
+      console.log(`Processing image for single index via upload button: ${targetIndex}`);
+      processImage(file, [targetIndex]); // Process for the stored target index
+    } else {
+      console.warn("Upload button file change triggered without a valid target index or file.");
+    }
+    // Reset input value and target index
+    e.target.value = "";
+    uploadTargetIndexRef.current = null;
+  };
+
+  // Handle click for the dedicated upload button
+  const handleUploadButtonClick = () => {
+    let targetIndex: number | null = null;
+
+    // Priority 1: Use the first selected index if available
+    if (selectedCardIndices.length > 0) {
+      targetIndex = selectedCardIndices[0];
+      console.log(`Upload button target: First selected index ${targetIndex}`);
+    } else {
+      // Priority 2: Find the first empty slot
+      const firstEmptyIndex = cards.slice(0, cardsPerRow * cardsPerColumn).findIndex(card => !card || !card.image);
+      if (firstEmptyIndex !== -1) {
+        targetIndex = firstEmptyIndex;
+        console.log(`Upload button target: First empty index ${targetIndex}`);
+      }
+    }
+
+    if (targetIndex !== null && targetIndex >= 0 && targetIndex < cardsPerRow * cardsPerColumn) {
+      uploadTargetIndexRef.current = targetIndex; // Store the target index
+      uploadInputRef.current?.click(); // Trigger the hidden input
+    } else {
+      toast({ title: "アップロード先なし", description: "選択中のスロット、または空きスロットがありません。", variant: "destructive" });
+      console.log("Upload button: No target slot found (grid full or invalid state).");
+    }
+  };
+
+
   // renderCanvas depends on containerWidth via mmToPixels
   const renderCanvas = useCallback(() => {
     if (!canvasRef.current || !printRef.current || containerWidth <= 0 || !Number.isFinite(containerWidth)) {
@@ -323,7 +366,7 @@ export function IntegratedCardEditor({
     });
 
     Promise.all(loadPromises).catch(err => {
-        console.error("Error during image loading/drawing:", err);
+        console.error("Error during image loading/drawing:", err); // Add comma
     });
   }, [cards, spacing, cardType, a4Width, a4Height, cardWidthMM, cardHeightMM, marginXMM, marginYMM, cardsPerRow, cardsPerColumn, mmToPixels, containerWidth]);
 
@@ -514,12 +557,10 @@ export function IntegratedCardEditor({
                             "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10 select-none", // select-none を追加
                             selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
                           )}
-                          // Combine style attributes and add onTouchMove preventDefault
-                          style={{ pointerEvents: "auto", touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-                          onTouchStart={(e) => handlePointerDown(e, index)}
-                          onTouchEnd={() => handlePointerUp(index)}
-                          onTouchCancel={() => handlePointerLeave(index)}
-                          onTouchMove={(e) => e.preventDefault()} // Prevent default behavior on touch move
+                          style={{ pointerEvents: "auto", touchAction: 'none' }} // pointerEvents: "auto" を明示
+                          onPointerDown={() => handlePointerDown(index)} // Use PointerDown
+                          onPointerUp={() => handlePointerUp(index)}     // Use PointerUp
+                          onPointerLeave={() => handlePointerLeave(index)} // Use PointerLeave
                           onContextMenu={(e) => e.preventDefault()} // コンテキストメニューを無効化
                         >
                           {/* 個別の隠し Input */}
@@ -558,7 +599,24 @@ export function IntegratedCardEditor({
               </div>
             </div>
             <div className="mt-6 space-y-4">
-              <div className="flex flex-col sm:flex-row justify-end items-center gap-4">
+              {/* Hidden input for the upload button */}
+              <Input
+                ref={uploadInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleUploadFileChange}
+              />
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                {/* Upload Button */}
+                <Button onClick={handleUploadButtonClick} disabled={isProcessingImage} className="bg-blue-500 hover:bg-blue-600 flex-1 sm:flex-none sm:w-auto">
+                  <Upload className="mr-2 h-4 w-4" />
+                  {selectedCardIndices.length > 0
+                    ? `${t("action.uploadToSelected")} (スロット ${selectedCardIndices[0] + 1})`
+                    : t("action.uploadImage")}
+                </Button>
+
+                {/* Existing Export Buttons */}
                 <div className="flex space-x-2 justify-end w-full sm:w-auto">
                   <Button variant="outline" onClick={() => window.print()} className="border-gold-500 flex-1 sm:flex-none sm:w-28">
                     <Printer className="mr-2 h-4 w-4" /> {t("action.print")}

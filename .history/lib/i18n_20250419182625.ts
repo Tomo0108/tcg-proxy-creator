@@ -272,28 +272,11 @@ const translations: Translations = {
     en: "Exporting...",
     ja: "エクスポート中...",
   },
-  // --- ここから追加 ---
-  "upload.restrictions": {
-    en: "Max 50MB. Supported formats: JPEG, PNG, GIF, WebP.",
-    ja: "最大50MB。対応形式: JPEG, PNG, GIF, WebP。"
+  "action.clickOrDropToUpload": { // New key for upload area
+    en: "Click or drag & drop to upload image",
+    ja: "クリックまたはドラッグ＆ドロップで画像をアップロード",
   },
-  "action.selectImage": {
-    en: "Select Image for", // 英語では後ろに数をつけたい
-    ja: "画像を選択"
-  },
-  "action.selectSlotFirst": {
-    en: "Select Slot(s) First",
-    ja: "先にスロットを選択"
-  },
-  "slotsSelected_one": { // 複数形キー (単数)
-    en: "slot selected",
-    ja: "スロット選択中"
-  },
-  "slotsSelected_other": { // 複数形キー (複数)
-    en: "slots selected",
-    ja: "スロット選択中" // 日本語は単複同形
-  }
-  // --- ここまで追加 ---
+  // Remove unused keys: action.uploadImage, action.uploadToSelected
 }
 
 // Create a store for language state
@@ -310,35 +293,12 @@ export const useLanguageStore = create<LanguageState>((set) => ({
 export function useTranslation() {
   const { locale, setLocale } = useLanguageStore()
 
-  // t 関数を拡張して count オプションをサポート（修正版）
-  const t = (key: string, options?: { count?: number }): string => {
-    let translationKey = key;
-    let translationFound = false;
-
-    // count オプションがある場合、複数形キーを試す
-    if (options?.count !== undefined) {
-      const pluralSuffix = options.count === 1 ? '_one' : '_other';
-      const pluralKey = `${key}${pluralSuffix}`;
-      if (translations[pluralKey]) {
-        translationKey = pluralKey;
-        translationFound = true;
-      }
+  const t = (key: string): string => {
+    if (translations[key]) {
+      return translations[key][locale]
     }
-
-    // 複数形キーが見つからない、または count オプションがない場合、元のキーを試す
-    if (!translationFound && translations[key]) {
-      translationKey = key;
-      translationFound = true;
-    }
-
-    // 翻訳が見つかった場合
-    if (translationFound) {
-      return translations[translationKey][locale];
-    }
-
-    // どのキーでも翻訳が見つからなかった場合
-    console.warn(`Translation missing for key: ${key}`);
-    return key; // 元のキーをそのまま返す
+    console.warn(`Translation missing for key: ${key}`)
+    return key
   }
 
   return { t, locale, setLocale }

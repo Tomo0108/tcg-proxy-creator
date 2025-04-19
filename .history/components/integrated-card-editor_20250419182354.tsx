@@ -48,7 +48,7 @@ export function IntegratedCardEditor({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const longPressTimer = useRef<NodeJS.Timeout | null>(null); // 長押しタイマー用 Ref
   const isLongPressing = useRef<boolean>(false); // 長押し判定フラグ用 Ref
-  const uploadTargetIndicesRef = useRef<number[] | null>(null); // アップロードエリアの対象インデックス配列用 Ref
+  const uploadTargetIndexRef = useRef<number | null>(null); // アップロードボタンの対象インデックス用 Ref
 
   // State for container width
   const [containerWidth, setContainerWidth] = useState(0);
@@ -221,90 +221,37 @@ export function IntegratedCardEditor({
   }, [onCardUpdate, cardType, t, cardsPerRow, cardsPerColumn]);
 
 
-  // Handle file selection for the dedicated upload area
+  // Handle file selection for the dedicated upload button
   const handleUploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    const targetIndices = uploadTargetIndicesRef.current; // 配列を取得
-
-    if (file && targetIndices && targetIndices.length > 0) {
-      console.log(`Processing image via upload area for indices: ${targetIndices.join(', ')}`);
-      processImage(file, targetIndices); // Process for the stored target indices
+    const targetIndex = uploadTargetIndexRef.current;
+    if (file && targetIndex !== null && targetIndex >= 0) {
+      console.log(`Processing image for single index via upload button: ${targetIndex}`);
+      processImage(file, [targetIndex]); // Process for the stored target index
     } else {
-      console.warn("Upload area file change triggered without a valid target index/indices or file.");
+      console.warn("Upload button file change triggered without a valid target index or file.");
     }
-    // Reset input value and target indices
+    // Reset input value and target index
     e.target.value = "";
-    uploadTargetIndicesRef.current = null;
+    uploadTargetIndexRef.current = null;
   };
 
-  // Handle click for the dedicated upload area
+  // Handle click for the dedicated upload button
   const handleUploadButtonClick = () => {
-    let targetIndices: number[] | null = null;
+    let targetIndex: number | null = null;
 
-    // Priority 1: Use all selected indices if available
+    // Priority 1: Use the first selected index if available
     if (selectedCardIndices.length > 0) {
-      targetIndices = [...selectedCardIndices]; // 選択中のインデックス全てをコピー
-      console.log(`Upload area target: Selected indices ${targetIndices.join(', ')}`);
+      targetIndex = selectedCardIndices[0];
+      console.log(`Upload button target: First selected index ${targetIndex}`);
     } else {
       // Priority 2: Find the first empty slot
       const firstEmptyIndex = cards.slice(0, cardsPerRow * cardsPerColumn).findIndex(card => !card || !card.image);
       if (firstEmptyIndex !== -1) {
-        targetIndices = [firstEmptyIndex]; // 最初の空きインデックスを配列に入れる
-        console.log(`Upload area target: First empty index ${firstEmptyIndex}`);
+        targetIndex = firstEmptyIndex;
+        console.log(`Upload button target: First empty index ${targetIndex}`);
       }
     }
-
-    if (targetIndices && targetIndices.length > 0) {
-      // Filter out invalid indices just in case
-      const validTargetIndices = targetIndices.filter(idx => idx >= 0 && idx < cardsPerRow * cardsPerColumn);
-      if (validTargetIndices.length > 0) {
-        uploadTargetIndicesRef.current = validTargetIndices; // Store the valid target indices
-        uploadInputRef.current?.click(); // Trigger the hidden input
-      } else {
-        toast({ title: "アップロード先なし", description: "有効なアップロード先スロットが見つかりません。", variant: "destructive" });
-        console.log("Upload area: No valid target slot found.");
-      }
-    } else {
-      toast({ title: "アップロード先なし", description: "選択中のスロット、または空きスロットがありません。", variant: "destructive" });
-      console.log("Upload area: No target slot found (grid full or invalid state).");
-    }
-  };
-
-
-  // renderCanvas depends on containerWidth via mmToPixels
-  const renderCanvas = useCallback(() => {
-    if (!canvasRef.current || !printRef.current || containerWidth <= 0 || !Number.isFinite(containerWidth)) {
-        return;
-    }
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d", { alpha: false });
-    if (!ctx) {
-        return;
-    }
-    const displayWidth = containerWidth;
-    const displayHeight = (containerWidth / a4Width) * a4Height;
-    if (displayWidth <= 0 || displayHeight <= 0 || !Number.isFinite(displayWidth) || !Number.isFinite(displayHeight)) {
-        return;
-    }
-    if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
-    }
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    if (cardsPerRow <= 0 || cardsPerColumn <= 0) {
-        return;
-    }
-
-    const loadPromises = cards.slice(0, cardsPerRow * cardsPerColumn).map((card, index) => {
-      const row = Math.floor(index / cardsPerRow);
-      const col = index % cardsPerRow;
-      const drawXBg = mmToPixels(marginXMM + col * (cardWidthMM + spacing));
-      const drawYBg = mmToPixels(marginYMM + row * (cardHeightMM + spacing));
-      const drawCardWidthBg = mmToPixels(cardWidthMM);
-      const drawCardHeightBg = mmToPixels(cardHeightMM);
 
       if (drawCardWidthBg > 0 && drawCardHeightBg > 0) {
           ctx.fillStyle = "#f0f0f0"; // 背景色を少し薄く
@@ -374,9 +321,9 @@ export function IntegratedCardEditor({
     });
 
     Promise.all(loadPromises).catch(err => {
-        console.error("Error during image loading/drawing:", err); // Add comma
+        console.error("Error during image loading/drawing:", err);
     });
-  }, [cards, spacing, cardType, a4Width, a4Height, cardWidthMM, cardHeightMM, marginXMM, marginYMM, cardsPerRow, cardsPerColumn, mmToPixels, containerWidth]); // Corrected closing brace and dependency array
+  }, [cards, spacing, cardType, a4Width, a4Height, cardWidthMM, cardHeightMM, marginXMM, marginYMM, cardsPerRow, cardsPerColumn, mmToPixels, containerWidth]);
 
   // useEffect to setup ResizeObserver and update containerWidth
   useEffect(() => {
@@ -607,39 +554,7 @@ export function IntegratedCardEditor({
               </div>
             </div>
             <div className="mt-6 space-y-4">
-              {/* Hidden input for the upload button */}
-              <Input
-                ref={uploadInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleUploadFileChange}
-              />
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                {/* Upload Area */}
-                <div
-                  onClick={handleUploadButtonClick}
-                  className={cn(
-                    "flex flex-col items-center justify-center w-full sm:w-auto sm:flex-1 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
-                    isProcessingImage ? "opacity-50 cursor-not-allowed" : ""
-                  )}
-                  style={{ minHeight: '60px' }} // Ensure minimum height
-                >
-                  <Upload className="h-6 w-6 text-gray-500 dark:text-gray-400 mb-1" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                    {selectedCardIndices.length > 1
-                      ? `${t("action.clickOrDropToUpload")} (${selectedCardIndices.length} スロット選択中)`
-                      : t("action.clickOrDropToUpload")}
-                  </span>
-                  {/* Optionally show target slot info more explicitly */}
-                  {/* {selectedCardIndices.length === 1 && (
-                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      (スロット {selectedCardIndices[0] + 1} へ)
-                    </span>
-                  )} */}
-                </div>
-
-                {/* Existing Export Buttons */}
+              <div className="flex flex-col sm:flex-row justify-end items-center gap-4">
                 <div className="flex space-x-2 justify-end w-full sm:w-auto">
                   <Button variant="outline" onClick={() => window.print()} className="border-gold-500 flex-1 sm:flex-none sm:w-28">
                     <Printer className="mr-2 h-4 w-4" /> {t("action.print")}

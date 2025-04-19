@@ -94,9 +94,7 @@ export function IntegratedCardEditor({
   }, [a4Width, containerWidth]);
 
   // --- 長押し・タップ処理 ---
-  // イベントオブジェクトを受け取るように変更 (e: React.TouchEvent)
-  const handlePointerDown = (e: React.TouchEvent, index: number) => {
-    e.preventDefault(); // デフォルトのタッチ動作 (テキスト選択、コピーメニュー等) を防ぐ
+  const handlePointerDown = (index: number) => {
     isLongPressing.current = false;
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -514,12 +512,10 @@ export function IntegratedCardEditor({
                             "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10 select-none", // select-none を追加
                             selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
                           )}
-                          // Combine style attributes and add onTouchMove preventDefault
-                          style={{ pointerEvents: "auto", touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-                          onTouchStart={(e) => handlePointerDown(e, index)}
-                          onTouchEnd={() => handlePointerUp(index)}
-                          onTouchCancel={() => handlePointerLeave(index)}
-                          onTouchMove={(e) => e.preventDefault()} // Prevent default behavior on touch move
+                          style={{ pointerEvents: "auto", touchAction: 'none' }} // pointerEvents: "auto" を明示
+                          onPointerDown={() => handlePointerDown(index)} // Use PointerDown
+                          onPointerUp={() => handlePointerUp(index)}     // Use PointerUp
+                          onPointerLeave={() => handlePointerLeave(index)} // Use PointerLeave
                           onContextMenu={(e) => e.preventDefault()} // コンテキストメニューを無効化
                         >
                           {/* 個別の隠し Input */}
@@ -557,28 +553,6 @@ export function IntegratedCardEditor({
                  )}
               </div>
             </div>
-
-            {/* Mobile Upload Button and Info */}
-            {isMobile && (
-              <div className="mt-4 space-y-2 border-t pt-4">
-                <Button
-                  onClick={() => inputRefs.current[-1]?.click()}
-                  disabled={selectedCardIndices.length === 0 || isProcessingImage}
-                  className="w-full bg-gold-500 hover:bg-gold-600"
-                  size="lg" // 少し大きめのボタンに
-                >
-                  <Upload className="mr-2 h-5 w-5" />
-                  {/* 選択中のスロット数を表示 */}
-                  {selectedCardIndices.length > 0
-                    ? `${t("action.selectImage")} (${selectedCardIndices.length} ${t("slotsSelected", { count: selectedCardIndices.length })})`
-                    : t("action.selectSlotFirst") /* スロット未選択時のテキスト */
-                  }
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">{t("upload.restrictions")}</p>
-              </div>
-            )}
-
-            {/* Export Buttons */}
             <div className="mt-6 space-y-4">
               <div className="flex flex-col sm:flex-row justify-end items-center gap-4">
                 <div className="flex space-x-2 justify-end w-full sm:w-auto">

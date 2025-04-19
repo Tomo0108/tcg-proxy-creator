@@ -272,28 +272,14 @@ const translations: Translations = {
     en: "Exporting...",
     ja: "エクスポート中...",
   },
-  // --- ここから追加 ---
-  "upload.restrictions": {
-    en: "Max 50MB. Supported formats: JPEG, PNG, GIF, WebP.",
-    ja: "最大50MB。対応形式: JPEG, PNG, GIF, WebP。"
+  "action.uploadImage": { // Add new key
+    en: "Upload Image",
+    ja: "画像をアップロード",
   },
-  "action.selectImage": {
-    en: "Select Image for", // 英語では後ろに数をつけたい
-    ja: "画像を選択"
+  "action.uploadToSelected": { // Add new key
+    en: "Upload to Selected",
+    ja: "選択スロットにアップロード",
   },
-  "action.selectSlotFirst": {
-    en: "Select Slot(s) First",
-    ja: "先にスロットを選択"
-  },
-  "slotsSelected_one": { // 複数形キー (単数)
-    en: "slot selected",
-    ja: "スロット選択中"
-  },
-  "slotsSelected_other": { // 複数形キー (複数)
-    en: "slots selected",
-    ja: "スロット選択中" // 日本語は単複同形
-  }
-  // --- ここまで追加 ---
 }
 
 // Create a store for language state
@@ -310,7 +296,6 @@ export const useLanguageStore = create<LanguageState>((set) => ({
 export function useTranslation() {
   const { locale, setLocale } = useLanguageStore()
 
-  // t 関数を元のシンプルな実装に戻す
   const t = (key: string): string => {
     if (translations[key]) {
       return translations[key][locale]
