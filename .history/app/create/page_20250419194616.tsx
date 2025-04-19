@@ -20,7 +20,6 @@ export default function CreatePage() {
    const [cmykMode, setCmykMode] = useState<"simple" | "accurate">("simple") // Add CMYK mode state
    const [cards, setCards] = useState(Array(9).fill(null))
    const [exportQuality, setExportQuality] = useState<"standard" | "high" | "ultra">("high") // Add exportQuality state
-   const isMobile = useMobileDetect()
 
   // Handle card creation or update
   const handleCardUpdate = (card: any, index: number) => {
@@ -100,28 +99,12 @@ export default function CreatePage() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                     <Label htmlFor="cmyk-switch">{t("settings.cmyk")}</Label>
-                     <Switch id="cmyk-switch" checked={cmykConversion} onCheckedChange={setCmykConversion} />
-                   </div>
-
-                   {/* CMYK Mode Selection (only if CMYK is enabled) */}
-                   {cmykConversion && (
-                     <div>
-                       <Label htmlFor="cmyk-mode">{t("settings.cmykMode")}</Label>
-                       <Select value={cmykMode} onValueChange={(value) => setCmykMode(value as any)}>
-                         <SelectTrigger id="cmyk-mode">
-                           <SelectValue placeholder={t("settings.cmykMode")} />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="simple">{t("cmykMode.simple")}</SelectItem>
-                           <SelectItem value="accurate">{t("cmykMode.accurate")}</SelectItem>
-                         </SelectContent>
-                       </Select>
-                     </div>
-                   )}
-                 </div>
-               </CardContent>
-             </Card>
+                    <Label htmlFor="cmyk-switch">{t("settings.cmyk")}</Label>
+                    <Switch id="cmyk-switch" checked={cmykConversion} onCheckedChange={setCmykConversion} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="text-sm text-muted-foreground">
               <p>
@@ -133,16 +116,10 @@ export default function CreatePage() {
               <p>
                 • {t("layout.info.cmyk")}: {cmykConversion ? t("enabled") : t("disabled")}
               </p>
-               <p>
-                 • {t("settings.quality")}: {t(`quality.${exportQuality}`)} {/* 品質表示を追加 */}
-               </p>
-               {/* CMYKモードのサマリー表示を追加 */}
-               {cmykConversion && (
-                 <p>
-                   • {t("settings.cmykMode")}: {t(`cmykMode.${cmykMode}`)}
-                 </p>
-               )}
-             </div>
+              <p>
+                • {t("settings.quality")}: {t(`quality.${exportQuality}`)} {/* 品質表示を追加 */}
+              </p>
+            </div>
           </div>
 
           {/* Integrated Card Editor - Right Side */}
@@ -152,11 +129,10 @@ export default function CreatePage() {
               spacing={spacing}
               cmykConversion={cmykConversion}
               cards={cards}
-               onCardUpdate={handleCardUpdate}
-               onCardRemove={handleCardRemove}
-               exportQuality={exportQuality}
-               cmykMode={cmykMode} // Pass cmykMode prop
-             />
+              onCardUpdate={handleCardUpdate}
+              onCardRemove={handleCardRemove}
+              exportQuality={exportQuality} // Pass exportQuality prop
+            />
           </div>
         </div>
       </div>

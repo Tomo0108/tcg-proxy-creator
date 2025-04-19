@@ -444,9 +444,6 @@ export function IntegratedCardEditor({
        const options = {
          cards, spacing, cardType, cmykConversion, cmykMode, // Pass cmykMode
          dpi: getDpiForQuality(), canvas: canvasRef.current,
-         dimensions: { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn },
-       };
-       const pdfBlob = await generatePDF(options);
       downloadFile(pdfBlob, "tcg-proxy-cards.pdf");
       toast({ title: t("toast.pdfSuccess"), description: t("toast.pdfSuccessDesc") });
     } catch (error) {
@@ -467,12 +464,11 @@ export function IntegratedCardEditor({
       if (exportQuality === "ultra") {
         toast({ title: "高品質出力処理中", description: "高解像度PNGの生成には時間がかかる場合があります。" });
       }
-        const options = {
-         cards, spacing, cardType, cmykConversion, cmykMode, // Pass cmykMode
-         dpi: getDpiForQuality(), canvas: canvasRef.current,
-         dimensions: { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn },
-       };
-       const pngBlob = await generatePNG(options);
+       const options = {
+        cards, spacing, cardType, cmykConversion, dpi: getDpiForQuality(), canvas: canvasRef.current,
+        dimensions: { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn },
+      };
+      const pngBlob = await generatePNG(options);
       downloadFile(pngBlob, "tcg-proxy-cards.png");
       toast({ title: t("toast.pngSuccess"), description: t("toast.pngSuccessDesc") });
     } catch (error) {

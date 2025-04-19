@@ -52,8 +52,7 @@ export interface PrintLayoutOptions {
        )
      } else {
       // Fallback to the old method
-      // Apply simulation only in simple mode
-      printCanvas = createPrintReadyCanvas(options.canvas, dpi, cmykConversion && cmykMode === 'simple')
+      printCanvas = createPrintReadyCanvas(options.canvas, dpi, cmykConversion)
     }
 
     // Use the imported jsPDF class directly
@@ -65,34 +64,22 @@ export interface PrintLayoutOptions {
       compress: false, // Disable compression for better quality
     })
 
-    let imageData: string;
-    let imageFormat: "JPEG" | "PNG";
+    // Convert canvas to image data URL with maximum quality
+    const imageData = printCanvas.toDataURL("image/jpeg", 1.0)
 
-    if (cmykConversion && cmykMode === 'simple') {
-      // Simple Mode: Use JPEG (RGB simulation)
-      // The simulation was already applied in renderHighQualityCards or createPrintReadyCanvas
-      imageData = printCanvas.toDataURL("image/jpeg", 1.0);
-      imageFormat = "JPEG";
-    } else {
-      // Accurate Mode or CMYK Disabled: Use PNG (RGB) for lossless quality
-      // Canvas should contain RGB data here
-      imageData = printCanvas.toDataURL("image/png", 1.0);
-      imageFormat = "PNG";
-    }
+    // Add the image to the PDF with high quality settings
+    pdf.addImage({
+      imageData,
+      format: "JPEG",
+      x: 0,
+      y: 0,
+      width: 210,
+      height: 297,
+      compression: "NONE",
+      alias: "card-layout",
+    })
 
-     // Add the image to the PDF
-     pdf.addImage({
-       imageData,
-       format: imageFormat,
-       x: 0,
-       y: 0,
-       width: 210, // A4 width in mm
-       height: 297, // A4 height in mm
-       compression: "NONE", // Use lossless compression if possible (especially for PNG)
-       alias: "card-layout",
-     })
-
-    // Set PDF properties (remains the same)
+    // Set PDF properties
     pdf.setProperties({
       title: "TCG Proxy Cards",
       subject: "Trading Card Game Proxy Cards",
@@ -100,10 +87,12 @@ export interface PrintLayoutOptions {
       keywords: "tcg, proxy, cards",
     })
 
-    // Note: Setting output intent reliably in jsPDF is complex/limited.
-    // The best approach for 'accurate' mode is embedding high-quality RGB (PNG)
-    // and letting the PDF viewer/printer handle the conversion using its profiles.
-    // Removed the old placeholder: pdf.setTextColor(...)
+    // Set output intent for CMYK if enabled
+    if (cmykConversion) {
+      // In a real implementation, we would set the output intent to CMYK
+      // This is a simplified version
+      pdf.setTextColor(0, 0, 0, 100) // CMYK black
+    }
 
     // Generate PDF blob with high quality settings
     const pdfBlob = pdf.output("blob")
@@ -134,8 +123,7 @@ export interface PrintLayoutOptions {
        )
      } else {
       // Fallback to the old method
-      // Apply simulation only in simple mode for PNG export as well
-      printCanvas = createPrintReadyCanvas(options.canvas, dpi, cmykConversion && cmykMode === 'simple')
+      printCanvas = createPrintReadyCanvas(options.canvas, dpi, cmykConversion)
     }
 
     // Convert canvas to PNG blob with maximum quality

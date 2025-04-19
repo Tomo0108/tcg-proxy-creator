@@ -106,17 +106,6 @@ export interface PrintLayoutOptions {
     // Removed the old placeholder: pdf.setTextColor(...)
 
     // Generate PDF blob with high quality settings
-    const pdfBlob = pdf.output("blob")
-    return pdfBlob
-  } catch (error) {
-    console.error("PDF generation error:", error)
-    throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : "Unknown error"}`)
-  }
-}
-
- export async function generatePNG(options: PrintLayoutOptions): Promise<Blob> {
-   try {
-     const { cards, cmykConversion, cmykMode, dpi, dimensions, spacing, cardType } = options // Add cmykMode here
 
      let printCanvas
 
@@ -134,8 +123,7 @@ export interface PrintLayoutOptions {
        )
      } else {
       // Fallback to the old method
-      // Apply simulation only in simple mode for PNG export as well
-      printCanvas = createPrintReadyCanvas(options.canvas, dpi, cmykConversion && cmykMode === 'simple')
+      printCanvas = createPrintReadyCanvas(options.canvas, dpi, cmykConversion)
     }
 
     // Convert canvas to PNG blob with maximum quality
