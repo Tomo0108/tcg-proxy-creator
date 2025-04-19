@@ -527,7 +527,6 @@ export function IntegratedCardEditor({
                             }}
                             type="file" accept="image/*" className="hidden"
                             onChange={(e) => handleFileChange(e, index)}
-                          />
                           {/* 削除ボタン */}
                           {cards[index] && (
                             <Button
