@@ -46,11 +46,10 @@ export function Header() {
         {/* Logo */}
         <Link
           href="/"
-          // Add text-foreground to ensure white text even in light mode (due to parent 'dark' class)
-          className="flex items-center gap-2 text-xl font-semibold font-['Gkktt'] text-foreground"
+          className="flex items-center gap-2 text-xl font-semibold font-['Gkktt']"
           onClick={handleLogoClick}
-          // Update text-shadow for a sharp, darker gold outline (gold-700: #856f00)
-          style={{ textShadow: "1px 1px 0 #856f00, -1px 1px 0 #856f00, 1px -1px 0 #856f00, -1px -1px 0 #856f00" }}
+          // Add text-shadow for gold outline
+          style={{ textShadow: "0 0 2px #dbb900, 0 0 2px #dbb900, 0 0 2px #dbb900, 0 0 2px #dbb900" }}
         >
           <Image
             src="/logo/proxy_creator_logo.png"
