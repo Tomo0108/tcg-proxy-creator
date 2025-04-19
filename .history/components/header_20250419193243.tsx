@@ -92,11 +92,11 @@ export function Header() {
                onClick={() => setTheme('light')}
                aria-label="Set light theme"
                className={cn(
-                 "flex items-center gap-1.5 text-foreground", // Use flex, gap
+                 "relative text-foreground", // Add relative positioning
                  theme === 'light' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
                )}
              >
-               {theme === 'light' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
+               <Sun className="h-[1.2rem] w-[1.2rem]" />
                <Sun className="h-[1.2rem] w-[1.2rem]" />
              </Button>
              <Button
@@ -104,12 +104,12 @@ export function Header() {
                size="icon"
                onClick={() => setTheme('dark')}
                aria-label="Set dark theme"
+               // Optionally add ring or opacity for active state if needed
                className={cn(
-                 "flex items-center gap-1.5 text-foreground", // Use flex, gap
+                 "text-foreground", // Add text-foreground
                  theme === 'dark' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
                )}
              >
-               {theme === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
                <Moon className="h-[1.2rem] w-[1.2rem]" />
              </Button>
             <LanguageSwitcher />
@@ -166,11 +166,10 @@ export function Header() {
                          onClick={() => { setTheme('light'); setIsMenuOpen(false); }} // メニューも閉じる
                          aria-label="Set light theme"
                          className={cn(
-                           "flex items-center gap-1.5 text-foreground", // Use flex, gap
+                           "text-foreground", // Add text-foreground
                            theme === 'light' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
                          )}
                        >
-                         {theme === 'light' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
                          <Sun className="h-[1.2rem] w-[1.2rem]" />
                        </Button>
                        <Button
@@ -179,11 +178,10 @@ export function Header() {
                          onClick={() => { setTheme('dark'); setIsMenuOpen(false); }} // メニューも閉じる
                          aria-label="Set dark theme"
                          className={cn(
-                           "flex items-center gap-1.5 text-foreground", // Use flex, gap
+                           "text-foreground", // Add text-foreground
                            theme === 'dark' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
                          )}
                        >
-                         {theme === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
                          <Moon className="h-[1.2rem] w-[1.2rem]" />
                        </Button>
                      </div>

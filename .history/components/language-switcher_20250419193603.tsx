@@ -1,4 +1,4 @@
-"use client"
+Card Type"use client"
 
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/lib/i18n"

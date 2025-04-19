@@ -14,24 +14,22 @@ export function LanguageSwitcher() {
         size="sm" // Adjust size to better match icon buttons if needed (sm: h-9, default: h-10)
          onClick={() => setLocale("en")}
          className={cn(
-           "flex items-center gap-1.5 text-sm text-foreground", // Use flex, gap
+           "text-sm text-foreground", // Ensure consistent text size and add text-foreground
            locale === "en" ? "opacity-100" : "opacity-60 hover:opacity-100" // Use opacity for active state
          )}
-       >
-         {locale === 'en' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
-         EN
+      >
+        EN
       </Button>
       <Button
         variant="ghost" // Change to ghost variant
         size="sm" // Adjust size
          onClick={() => setLocale("ja")}
          className={cn(
-           "flex items-center gap-1.5 text-sm text-foreground", // Use flex, gap
+           "text-sm text-foreground", // Ensure consistent text size and add text-foreground
            locale === "ja" ? "opacity-100" : "opacity-60 hover:opacity-100" // Use opacity for active state
          )}
-       >
-         {locale === 'ja' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
-         JA
+      >
+        JA
       </Button>
     </div>
   )
