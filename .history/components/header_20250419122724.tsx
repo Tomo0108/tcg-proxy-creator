@@ -130,45 +130,6 @@ export function Header() {
                           "flex items-center gap-3 rounded-md px-3 py-2 text-base font-medium",
                           pathname === item.href
                             ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                        )}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <item.icon className="h-5 w-5" />
-                        {item.label}
-                      </Link>
-                  ))}
-                </nav>
-
-                <Separator className="my-2 bg-gold-500 h-[1px]" />
-
-                {/* Mobile Controls */}
-                <div className="grid gap-6">
-                   {/* モバイル用テーマボタン */}
-                   <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium">Mode</span>
-                     <div className="flex items-center gap-2"> {/* ボタンをグループ化 */}
-                       <Button
-                         variant={theme === 'light' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-                         size="icon"
-                         onClick={() => { setTheme('light'); setIsMenuOpen(false); }} // メニューも閉じる
-                         aria-label="Set light theme"
-                         className="border-gold-500"
-                       >
-                         <Sun className="h-[1.2rem] w-[1.2rem]" />
-                       </Button>
-                       <Button
-                         variant={theme === 'dark' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-                         size="icon"
-                         onClick={() => { setTheme('dark'); setIsMenuOpen(false); }} // メニューも閉じる
-                         aria-label="Set dark theme"
-                         className="border-gold-500"
-                       >
-                         <Moon className="h-[1.2rem] w-[1.2rem]" />
-                       </Button>
-                     </div>
-                   </div>
-                   <div className="flex items-center justify-between">
                      <span className="text-sm font-medium">Language</span>
                      <LanguageSwitcher />
                    </div>

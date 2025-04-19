@@ -4,10 +4,9 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Menu, Home, PlusSquare, Sun, Moon } from "lucide-react" // Sun, Moon を追加
-import { useTheme } from "next-themes" // useTheme を追加
+import { Menu, Home, PlusSquare } from "lucide-react" // X を削除
 import { useTranslation } from "@/lib/i18n"
-// import { ThemeToggle } from "@/components/theme-toggle" // ThemeToggle を削除
+import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  // SheetClose, // SheetClose を削除
 } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
@@ -24,7 +24,6 @@ export function Header() {
   const { t } = useTranslation()
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { theme, setTheme } = useTheme(); // useTheme を使用
 
   // アイコン付きナビゲーションアイテム
   const navItems = [
@@ -80,26 +79,8 @@ export function Header() {
               )
             })}
           </nav>
-          {/* デスクトップ用テーマボタン */}
-          <div className="flex items-center gap-2"> {/* gap-2 に変更 */}
-             <Button
-               variant={theme === 'light' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-               size="icon"
-               onClick={() => setTheme('light')}
-               aria-label="Set light theme"
-               className="border-gold-500"
-             >
-               <Sun className="h-[1.2rem] w-[1.2rem]" />
-             </Button>
-             <Button
-               variant={theme === 'dark' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-               size="icon"
-               onClick={() => setTheme('dark')}
-               aria-label="Set dark theme"
-               className="border-gold-500"
-             >
-               <Moon className="h-[1.2rem] w-[1.2rem]" />
-             </Button>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
             <LanguageSwitcher />
           </div>
         </div>
@@ -113,9 +94,10 @@ export function Header() {
                 <span className="sr-only">Open menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="flex flex-col pt-8">
-              <SheetHeader className="text-left">
-                <SheetTitle>Menu</SheetTitle>
+            <SheetContent side="right" className="flex flex-col pt-8"> {/* pt-8 でヘッダー分のスペース確保 */}
+              <SheetHeader className="text-left"> {/* justify-between と pr-2 を削除 */}
+                <SheetTitle>Menu</SheetTitle> {/* 文言変更 */}
+                {/* 閉じるボタンを削除 */}
               </SheetHeader>
 
               {/* メニュー内容 */}
@@ -140,36 +122,21 @@ export function Header() {
                   ))}
                 </nav>
 
+                {/* 罫線のスタイル変更 */}
                 <Separator className="my-2 bg-gold-500 h-[1px]" />
 
                 {/* Mobile Controls */}
                 <div className="grid gap-6">
-                   {/* モバイル用テーマボタン */}
                    <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium">Mode</span>
-                     <div className="flex items-center gap-2"> {/* ボタンをグループ化 */}
-                       <Button
-                         variant={theme === 'light' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-                         size="icon"
-                         onClick={() => { setTheme('light'); setIsMenuOpen(false); }} // メニューも閉じる
-                         aria-label="Set light theme"
-                         className="border-gold-500"
-                       >
-                         <Sun className="h-[1.2rem] w-[1.2rem]" />
-                       </Button>
-                       <Button
-                         variant={theme === 'dark' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-                         size="icon"
-                         onClick={() => { setTheme('dark'); setIsMenuOpen(false); }} // メニューも閉じる
-                         aria-label="Set dark theme"
-                         className="border-gold-500"
-                       >
-                         <Moon className="h-[1.2rem] w-[1.2rem]" />
-                       </Button>
-                     </div>
+                     {/* 文言変更 */}
+                     <span className="text-sm font-medium flex items-center gap-2">
+                       <ThemeToggle /> {/* アイコンをラベルの隣に移動 */}
+                       Mode
+                     </span>
+                     {/* <ThemeToggle /> ボタンはラベルの隣に移動 */}
                    </div>
                    <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium">Language</span>
+                     <span className="text-sm font-medium">Language</span> {/* 文言変更 */}
                      <LanguageSwitcher />
                    </div>
                 </div>

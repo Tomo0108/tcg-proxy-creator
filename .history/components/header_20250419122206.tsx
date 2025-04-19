@@ -4,10 +4,9 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Menu, Home, PlusSquare, Sun, Moon } from "lucide-react" // Sun, Moon を追加
-import { useTheme } from "next-themes" // useTheme を追加
+import { Menu, Home, PlusSquare } from "lucide-react" // X を削除
 import { useTranslation } from "@/lib/i18n"
-// import { ThemeToggle } from "@/components/theme-toggle" // ThemeToggle を削除
+import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  // SheetClose, // SheetClose を削除
 } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
@@ -24,7 +24,6 @@ export function Header() {
   const { t } = useTranslation()
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { theme, setTheme } = useTheme(); // useTheme を使用
 
   // アイコン付きナビゲーションアイテム
   const navItems = [
@@ -75,31 +74,15 @@ export function Header() {
                   )}
                 >
                   {isActive && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
+                  {/* デスクトップではアイコン非表示も検討可 */}
+                  {/* <item.icon className="h-4 w-4 mr-1" /> */}
                   {item.label}
                 </Link>
               )
             })}
           </nav>
-          {/* デスクトップ用テーマボタン */}
-          <div className="flex items-center gap-2"> {/* gap-2 に変更 */}
-             <Button
-               variant={theme === 'light' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-               size="icon"
-               onClick={() => setTheme('light')}
-               aria-label="Set light theme"
-               className="border-gold-500"
-             >
-               <Sun className="h-[1.2rem] w-[1.2rem]" />
-             </Button>
-             <Button
-               variant={theme === 'dark' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-               size="icon"
-               onClick={() => setTheme('dark')}
-               aria-label="Set dark theme"
-               className="border-gold-500"
-             >
-               <Moon className="h-[1.2rem] w-[1.2rem]" />
-             </Button>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
             <LanguageSwitcher />
           </div>
         </div>
@@ -113,13 +96,19 @@ export function Header() {
                 <span className="sr-only">Open menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="flex flex-col pt-8">
-              <SheetHeader className="text-left">
-                <SheetTitle>Menu</SheetTitle>
+            <SheetContent side="right" className="flex flex-col"> {/* flex flex-col を追加 */}
+              <SheetHeader className="flex flex-row items-center justify-between pr-2"> {/* レイアウト調整 */}
+                <SheetTitle>{t("nav.menu")}</SheetTitle>
+                <SheetClose asChild>
+                  <Button variant="ghost" size="icon">
+                    <X className="h-5 w-5" />
+                    <span className="sr-only">Close menu</span>
+                  </Button>
+                </SheetClose>
               </SheetHeader>
 
               {/* メニュー内容 */}
-              <div className="flex flex-1 flex-col gap-4 py-4">
+              <div className="flex flex-1 flex-col gap-4 py-4"> {/* flex-1 を追加 */}
                 {/* Mobile Nav Links */}
                 <nav className="grid gap-2">
                   {navItems.map((item) => (
@@ -127,49 +116,29 @@ export function Header() {
                         key={item.href}
                         href={item.href}
                         className={cn(
-                          "flex items-center gap-3 rounded-md px-3 py-2 text-base font-medium",
+                          "flex items-center gap-3 rounded-md px-3 py-2 text-base font-medium", // gap-3, text-base に変更
                           pathname === item.href
                             ? "bg-accent text-accent-foreground"
                             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                         )}
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        <item.icon className="h-5 w-5" />
+                        <item.icon className="h-5 w-5" /> {/* アイコン表示 */}
                         {item.label}
                       </Link>
                   ))}
                 </nav>
 
-                <Separator className="my-2 bg-gold-500 h-[1px]" />
+                <Separator className="my-2" /> {/* 区切り線を追加 */}
 
                 {/* Mobile Controls */}
-                <div className="grid gap-6">
-                   {/* モバイル用テーマボタン */}
+                <div className="grid gap-6"> {/* gap-6 を維持 */}
                    <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium">Mode</span>
-                     <div className="flex items-center gap-2"> {/* ボタンをグループ化 */}
-                       <Button
-                         variant={theme === 'light' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-                         size="icon"
-                         onClick={() => { setTheme('light'); setIsMenuOpen(false); }} // メニューも閉じる
-                         aria-label="Set light theme"
-                         className="border-gold-500"
-                       >
-                         <Sun className="h-[1.2rem] w-[1.2rem]" />
-                       </Button>
-                       <Button
-                         variant={theme === 'dark' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-                         size="icon"
-                         onClick={() => { setTheme('dark'); setIsMenuOpen(false); }} // メニューも閉じる
-                         aria-label="Set dark theme"
-                         className="border-gold-500"
-                       >
-                         <Moon className="h-[1.2rem] w-[1.2rem]" />
-                       </Button>
-                     </div>
+                     <span className="text-sm font-medium">{t("settings.theme")}</span>
+                     <ThemeToggle />
                    </div>
                    <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium">Language</span>
+                     <span className="text-sm font-medium">{t("settings.language")}</span>
                      <LanguageSwitcher />
                    </div>
                 </div>

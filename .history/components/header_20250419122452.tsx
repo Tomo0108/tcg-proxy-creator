@@ -4,10 +4,9 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Menu, Home, PlusSquare, Sun, Moon } from "lucide-react" // Sun, Moon を追加
-import { useTheme } from "next-themes" // useTheme を追加
+import { Menu, Home, PlusSquare } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
-// import { ThemeToggle } from "@/components/theme-toggle" // ThemeToggle を削除
+import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,7 +23,6 @@ export function Header() {
   const { t } = useTranslation()
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { theme, setTheme } = useTheme(); // useTheme を使用
 
   // アイコン付きナビゲーションアイテム
   const navItems = [
@@ -80,26 +78,8 @@ export function Header() {
               )
             })}
           </nav>
-          {/* デスクトップ用テーマボタン */}
-          <div className="flex items-center gap-2"> {/* gap-2 に変更 */}
-             <Button
-               variant={theme === 'light' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-               size="icon"
-               onClick={() => setTheme('light')}
-               aria-label="Set light theme"
-               className="border-gold-500"
-             >
-               <Sun className="h-[1.2rem] w-[1.2rem]" />
-             </Button>
-             <Button
-               variant={theme === 'dark' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-               size="icon"
-               onClick={() => setTheme('dark')}
-               aria-label="Set dark theme"
-               className="border-gold-500"
-             >
-               <Moon className="h-[1.2rem] w-[1.2rem]" />
-             </Button>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
             <LanguageSwitcher />
           </div>
         </div>
@@ -144,29 +124,10 @@ export function Header() {
 
                 {/* Mobile Controls */}
                 <div className="grid gap-6">
-                   {/* モバイル用テーマボタン */}
+                   {/* "Mode" 行のレイアウト修正 */}
                    <div className="flex items-center justify-between">
                      <span className="text-sm font-medium">Mode</span>
-                     <div className="flex items-center gap-2"> {/* ボタンをグループ化 */}
-                       <Button
-                         variant={theme === 'light' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-                         size="icon"
-                         onClick={() => { setTheme('light'); setIsMenuOpen(false); }} // メニューも閉じる
-                         aria-label="Set light theme"
-                         className="border-gold-500"
-                       >
-                         <Sun className="h-[1.2rem] w-[1.2rem]" />
-                       </Button>
-                       <Button
-                         variant={theme === 'dark' ? 'secondary' : 'ghost'} // アクティブ状態を反映
-                         size="icon"
-                         onClick={() => { setTheme('dark'); setIsMenuOpen(false); }} // メニューも閉じる
-                         aria-label="Set dark theme"
-                         className="border-gold-500"
-                       >
-                         <Moon className="h-[1.2rem] w-[1.2rem]" />
-                       </Button>
-                     </div>
+                     <ThemeToggle /> {/* ボタンを右側に配置 */}
                    </div>
                    <div className="flex items-center justify-between">
                      <span className="text-sm font-medium">Language</span>

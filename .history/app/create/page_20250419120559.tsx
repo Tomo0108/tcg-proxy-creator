@@ -72,7 +72,6 @@ export default function CreatePage() {
                   {/* Moved Quality setting here */}
                   <div>
                     <Label htmlFor="export-quality">{t("settings.quality")}</Label> {/* Use translation key */}
-                    <Select value={exportQuality} onValueChange={(value) => setExportQuality(value as any)}>
                       <SelectTrigger id="export-quality">
                         <SelectValue placeholder={t("settings.quality")} /> {/* Use translation key for placeholder */}
                       </SelectTrigger>
