@@ -514,12 +514,12 @@ export function IntegratedCardEditor({
                             "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10 select-none", // select-none を追加
                             selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
                           )}
-                          // Combine style attributes and add onTouchMove preventDefault
+                          // Add user-select: none directly for stronger prevention
                           style={{ pointerEvents: "auto", touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+                          // イベントオブジェクト (e) を handlePointerDown に渡す
                           onTouchStart={(e) => handlePointerDown(e, index)}
                           onTouchEnd={() => handlePointerUp(index)}
                           onTouchCancel={() => handlePointerLeave(index)}
-                          onTouchMove={(e) => e.preventDefault()} // Prevent default behavior on touch move
                           onContextMenu={(e) => e.preventDefault()} // コンテキストメニューを無効化
                         >
                           {/* 個別の隠し Input */}
