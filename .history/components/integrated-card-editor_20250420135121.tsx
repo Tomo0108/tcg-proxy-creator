@@ -3,29 +3,27 @@
 import type React from "react"
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
-import { Button } from "@/components/ui/button" // Keep existing Button import
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
- import { Input } from "@/components/ui/input"
- import { Label } from "@/components/ui/label"
- import { Upload, Download, Printer, Trash2, RotateCcw } from "lucide-react" // Import RotateCcw
- import { useTranslation } from "@/lib/i18n"
- import { generatePDF, generatePNG } from "@/lib/pdf-generator"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Upload, Download, Printer, Trash2 } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
+import { generatePDF, generatePNG } from "@/lib/pdf-generator"
 import { toast } from "@/components/ui/use-toast"
 import { useMobileDetect } from "@/hooks/use-mobile"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip" // Import Tooltip components
 import { cn } from "@/lib/utils" // cn をインポート
 
 interface IntegratedCardEditorProps {
   cardType: string
   spacing: number
   cmykConversion: boolean
-   cards: any[]
-   onCardUpdate: (card: any, index: number) => void
-   onCardRemove: (index: number) => void
-   onResetCards: () => void // Add reset function prop type
-   exportQuality: "standard" | "high" | "ultra"
-   cmykMode: "simple" | "accurate" // Add cmykMode prop type
- }
+  cards: any[]
+  onCardUpdate: (card: any, index: number) => void
+  onCardRemove: (index: number) => void
+  exportQuality: "standard" | "high" | "ultra"
+  cmykMode: "simple" | "accurate" // Add cmykMode prop type
+}
 
 const LONG_PRESS_DURATION = 500; // 長押し判定時間 (ms)
 
@@ -34,13 +32,12 @@ export function IntegratedCardEditor({
   spacing,
   cmykConversion,
   cards,
-   onCardUpdate,
-   onCardRemove,
-   onResetCards, // Receive reset function
-   exportQuality,
-   cmykMode, // Receive cmykMode prop
- }: IntegratedCardEditorProps) {
-   const { t } = useTranslation()
+  onCardUpdate,
+  onCardRemove,
+  exportQuality,
+  cmykMode, // Receive cmykMode prop
+}: IntegratedCardEditorProps) {
+  const { t } = useTranslation()
   const isMobile = useMobileDetect()
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]); // 複数選択用の state
   const [isExporting, setIsExporting] = useState(false)
@@ -225,6 +222,7 @@ export function IntegratedCardEditor({
     reader.readAsDataURL(file);
   }, [onCardUpdate, cardType, t, cardsPerRow, cardsPerColumn]);
 
+
   // Handle file selection for the dedicated upload area (multiple files)
   const handleUploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -386,6 +384,7 @@ export function IntegratedCardEditor({
       console.log("Upload area: No target slot found (grid full or invalid state).");
     }
   };
+
 
   // renderCanvas depends on containerWidth via mmToPixels
   const renderCanvas = useCallback(() => {
@@ -646,26 +645,6 @@ export function IntegratedCardEditor({
           <CardContent className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">{t("layout.preview")}</h3>
-              {/* Reset Button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {/* Apply the new class string and remove variant/size, set text-white */}
-                    <Button
-                      onClick={onResetCards}
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 flex-1 sm:flex-none sm:w-28"
-                    >
-                      {/* Keep the icon */}
-                      <RotateCcw className="h-4 w-4" />
-                      {/* Ensure span is visible */}
-                      <span>{t("action.resetAll")}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("action.resetAll")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
             <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg overflow-hidden">
               <div

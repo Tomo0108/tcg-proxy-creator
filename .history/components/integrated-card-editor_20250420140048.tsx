@@ -650,15 +650,14 @@ export function IntegratedCardEditor({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    {/* Apply the new class string and remove variant/size, set text-white */}
                     <Button
+                      variant="ghost" // Use ghost variant for less emphasis
+                      size="icon"
                       onClick={onResetCards}
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 flex-1 sm:flex-none sm:w-28"
+                      className="text-muted-foreground hover:text-foreground"
                     >
-                      {/* Keep the icon */}
                       <RotateCcw className="h-4 w-4" />
-                      {/* Ensure span is visible */}
-                      <span>{t("action.resetAll")}</span>
+                      <span className="sr-only">{t("action.resetAll")}</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -670,24 +669,6 @@ export function IntegratedCardEditor({
             <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg overflow-hidden">
               <div
                 ref={printRef}
-                className="relative bg-white dark:bg-gray-900 border rounded-lg mx-auto"
-                style={{
-                  width: "100%", aspectRatio: `${a4Width} / ${a4Height}`,
-                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)", overflow: "hidden",
-                  height: containerWidth > 0 ? `${(containerWidth / a4Width) * a4Height}px` : undefined,
-                  outline: containerWidth <= 0 ? '2px dashed red' : 'none',
-                }}
-              >
-                <canvas
-                  ref={canvasRef}
-                  id="print-layout-canvas"
-                  className="absolute top-0 left-0 w-full h-full"
-                  style={{ padding: 0, border: 'none', margin: 0, display: 'block' }}
-                />
-                {overlayStyles.display !== 'none' && gridStyles.display !== 'none' && (
-                  <div
-                    className="absolute top-0 left-0 w-full h-full z-10" // z-10 を追加
-                    style={overlayStyles}
                   >
                     <div className="grid h-full w-full" style={gridStyles}>
                       {/* 複数選択用の隠し Input */}

@@ -387,6 +387,7 @@ export function IntegratedCardEditor({
     }
   };
 
+
   // renderCanvas depends on containerWidth via mmToPixels
   const renderCanvas = useCallback(() => {
     if (!canvasRef.current || !printRef.current || containerWidth <= 0 || !Number.isFinite(containerWidth)) {
@@ -646,26 +647,6 @@ export function IntegratedCardEditor({
           <CardContent className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">{t("layout.preview")}</h3>
-              {/* Reset Button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {/* Apply the new class string and remove variant/size, set text-white */}
-                    <Button
-                      onClick={onResetCards}
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 flex-1 sm:flex-none sm:w-28"
-                    >
-                      {/* Keep the icon */}
-                      <RotateCcw className="h-4 w-4" />
-                      {/* Ensure span is visible */}
-                      <span>{t("action.resetAll")}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("action.resetAll")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
             <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg overflow-hidden">
               <div

@@ -274,7 +274,7 @@ const translations: Translations = {
   },
   "action.resetAll": { // Add reset button translation
     en: "Reset All",
-    ja: "リセット",
+    ja: "すべてリセット",
   },
   "action.clickOrDropToUpload": { // New key for upload area
     en: "Click or drag & drop to upload image",

@@ -3,29 +3,27 @@
 import type React from "react"
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
-import { Button } from "@/components/ui/button" // Keep existing Button import
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
- import { Input } from "@/components/ui/input"
- import { Label } from "@/components/ui/label"
- import { Upload, Download, Printer, Trash2, RotateCcw } from "lucide-react" // Import RotateCcw
- import { useTranslation } from "@/lib/i18n"
- import { generatePDF, generatePNG } from "@/lib/pdf-generator"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Upload, Download, Printer, Trash2 } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
+import { generatePDF, generatePNG } from "@/lib/pdf-generator"
 import { toast } from "@/components/ui/use-toast"
 import { useMobileDetect } from "@/hooks/use-mobile"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip" // Import Tooltip components
 import { cn } from "@/lib/utils" // cn をインポート
 
 interface IntegratedCardEditorProps {
   cardType: string
   spacing: number
   cmykConversion: boolean
-   cards: any[]
-   onCardUpdate: (card: any, index: number) => void
-   onCardRemove: (index: number) => void
-   onResetCards: () => void // Add reset function prop type
-   exportQuality: "standard" | "high" | "ultra"
-   cmykMode: "simple" | "accurate" // Add cmykMode prop type
- }
+  cards: any[]
+  onCardUpdate: (card: any, index: number) => void
+  onCardRemove: (index: number) => void
+  exportQuality: "standard" | "high" | "ultra"
+  cmykMode: "simple" | "accurate" // Add cmykMode prop type
+}
 
 const LONG_PRESS_DURATION = 500; // 長押し判定時間 (ms)
 
@@ -34,13 +32,12 @@ export function IntegratedCardEditor({
   spacing,
   cmykConversion,
   cards,
-   onCardUpdate,
-   onCardRemove,
-   onResetCards, // Receive reset function
-   exportQuality,
-   cmykMode, // Receive cmykMode prop
- }: IntegratedCardEditorProps) {
-   const { t } = useTranslation()
+  onCardUpdate,
+  onCardRemove,
+  exportQuality,
+  cmykMode, // Receive cmykMode prop
+}: IntegratedCardEditorProps) {
+  const { t } = useTranslation()
   const isMobile = useMobileDetect()
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]); // 複数選択用の state
   const [isExporting, setIsExporting] = useState(false)
@@ -225,122 +222,19 @@ export function IntegratedCardEditor({
     reader.readAsDataURL(file);
   }, [onCardUpdate, cardType, t, cardsPerRow, cardsPerColumn]);
 
-  // Handle file selection for the dedicated upload area (multiple files)
+
+  // Handle file selection for the dedicated upload area
   const handleUploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+    const file = e.target.files?.[0];
     const targetIndices = uploadTargetIndicesRef.current; // 配列を取得
 
-    if (files && files.length > 0 && targetIndices && targetIndices.length > 0) {
-      console.log(`Processing ${files.length} images via upload area for indices: ${targetIndices.join(', ')}`);
-
-      // Determine how many files to process (up to the number of target slots)
-      const filesToProcess = Array.from(files).slice(0, targetIndices.length);
-
-      // Process each file for a corresponding target index
-      filesToProcess.forEach((file, i) => {
-        const targetIndex = targetIndices[i];
-        if (targetIndex !== undefined) { // Ensure the index exists
-          console.log(`Processing file ${i + 1} for target index ${targetIndex}`);
-          // We need a way to process each file individually.
-          // Modifying processImage or creating a new function might be needed.
-          // For now, let's adapt the existing processImage logic inline or call it repeatedly.
-          // Calling processImage repeatedly might trigger multiple toasts and state updates inefficiently.
-          // Let's try processing them in a batch.
-
-          // --- Inline processing logic (similar to processImage but for one file/index pair) ---
-          setIsProcessingImage(true); // Set processing state
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-              const imageDataUrl = event.target?.result as string;
-              const originalSize = { width: img.width, height: img.height };
-              const cardData = {
-                image: imageDataUrl,
-                scale: 1,
-                type: cardType,
-                originalSize,
-                position: { x: 0, y: 0 }
-              };
-              if (cardsPerRow > 0 && cardsPerColumn > 0 && targetIndex >= 0 && targetIndex < cardsPerRow * cardsPerColumn) {
-                onCardUpdate(cardData, targetIndex);
-              }
-              // Consider moving toast and state reset outside the loop for batch completion message
-              // toast({ title: t("toast.imageAdded"), description: `画像をスロット ${targetIndex + 1} に追加しました。` });
-              // setIsProcessingImage(false); // Reset processing state after each file? Or after all?
-            };
-            img.onerror = () => {
-              toast({ title: "画像読み込みエラー", description: `ファイル ${file.name} の読み込みに失敗しました。`, variant: "destructive" });
-              // setIsProcessingImage(false); // Reset on error
-            };
-            img.src = event.target?.result as string;
-          };
-          reader.onerror = () => {
-            toast({ title: "ファイル読み込みエラー", description: `ファイル ${file.name} の読み込みに失敗しました。`, variant: "destructive" });
-            // setIsProcessingImage(false); // Reset on error
-          };
-          reader.readAsDataURL(file);
-          // --- End of inline processing logic ---
-        }
-      });
-
-      // After loop: Show a single toast for batch completion and reset state
-      // Need to wait for all file readers to complete. Using Promise.all might be better.
-      // Let's refine this with Promise.all.
-
-      // --- Refined processing with Promise.all ---
-      setIsProcessingImage(true);
-      const processPromises = filesToProcess.map((file, i) => {
-        const targetIndex = targetIndices[i];
-        if (targetIndex === undefined) return Promise.resolve(); // Skip if no target index
-
-        return new Promise<void>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-              const imageDataUrl = event.target?.result as string;
-              const originalSize = { width: img.width, height: img.height };
-              const cardData = {
-                image: imageDataUrl, scale: 1, type: cardType, originalSize, position: { x: 0, y: 0 }
-              };
-              if (cardsPerRow > 0 && cardsPerColumn > 0 && targetIndex >= 0 && targetIndex < cardsPerRow * cardsPerColumn) {
-                onCardUpdate(cardData, targetIndex);
-              }
-              resolve();
-            };
-            img.onerror = () => {
-              console.error(`Error loading image: ${file.name}`);
-              reject(new Error(`画像読み込みエラー: ${file.name}`));
-            };
-            img.src = event.target?.result as string;
-          };
-          reader.onerror = () => {
-            console.error(`Error reading file: ${file.name}`);
-            reject(new Error(`ファイル読み込みエラー: ${file.name}`));
-          };
-          reader.readAsDataURL(file);
-        });
-      });
-
-      Promise.all(processPromises)
-        .then(() => {
-          toast({ title: t("toast.imageAdded"), description: `${filesToProcess.length} 個の画像をスロットに追加しました。` });
-        })
-        .catch((error) => {
-          toast({ title: "一部画像の処理に失敗", description: error.message || "画像の処理中にエラーが発生しました。", variant: "destructive" });
-        })
-        .finally(() => {
-          setIsProcessingImage(false);
-          setSelectedCardIndices([]); // Reset selection after processing
-        });
-      // --- End of refined processing ---
-
+    if (file && targetIndices && targetIndices.length > 0) {
+      console.log(`Processing image via upload area for indices: ${targetIndices.join(', ')}`);
+      processImage(file, targetIndices); // Process for the stored target indices
     } else {
-      console.warn("Upload area file change triggered without valid files or target indices.");
+      console.warn("Upload area file change triggered without a valid target index/indices or file.");
     }
-
-    // Reset input value and target indices regardless of success/failure
+    // Reset input value and target indices
     e.target.value = "";
     uploadTargetIndicesRef.current = null;
   };
@@ -386,6 +280,7 @@ export function IntegratedCardEditor({
       console.log("Upload area: No target slot found (grid full or invalid state).");
     }
   };
+
 
   // renderCanvas depends on containerWidth via mmToPixels
   const renderCanvas = useCallback(() => {
@@ -646,26 +541,6 @@ export function IntegratedCardEditor({
           <CardContent className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">{t("layout.preview")}</h3>
-              {/* Reset Button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {/* Apply the new class string and remove variant/size, set text-white */}
-                    <Button
-                      onClick={onResetCards}
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 flex-1 sm:flex-none sm:w-28"
-                    >
-                      {/* Keep the icon */}
-                      <RotateCcw className="h-4 w-4" />
-                      {/* Ensure span is visible */}
-                      <span>{t("action.resetAll")}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("action.resetAll")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
             <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg overflow-hidden">
               <div
@@ -747,14 +622,13 @@ export function IntegratedCardEditor({
             <div className="mt-6 space-y-4">
               {/* Hidden input for the upload button */}
               <Input
-                 ref={uploadInputRef}
-                 type="file"
-                 accept="image/*"
-                 multiple // Allow multiple file selection
-                 className="hidden"
-                 onChange={handleUploadFileChange}
-               />
-               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                ref={uploadInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleUploadFileChange}
+              />
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 {/* Upload Area */}
                 <div
                   onClick={handleUploadButtonClick}

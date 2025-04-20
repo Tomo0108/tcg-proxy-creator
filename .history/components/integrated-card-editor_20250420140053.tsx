@@ -650,15 +650,14 @@ export function IntegratedCardEditor({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    {/* Apply the new class string and remove variant/size, set text-white */}
                     <Button
+                      variant="ghost" // Use ghost variant for less emphasis
+                      size="icon"
                       onClick={onResetCards}
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 flex-1 sm:flex-none sm:w-28"
+                      className="text-muted-foreground hover:text-foreground"
                     >
-                      {/* Keep the icon */}
                       <RotateCcw className="h-4 w-4" />
-                      {/* Ensure span is visible */}
-                      <span>{t("action.resetAll")}</span>
+                      <span className="sr-only">{t("action.resetAll")}</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -747,24 +746,6 @@ export function IntegratedCardEditor({
             <div className="mt-6 space-y-4">
               {/* Hidden input for the upload button */}
               <Input
-                 ref={uploadInputRef}
-                 type="file"
-                 accept="image/*"
-                 multiple // Allow multiple file selection
-                 className="hidden"
-                 onChange={handleUploadFileChange}
-               />
-               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                {/* Upload Area */}
-                <div
-                  onClick={handleUploadButtonClick}
-                  className={cn(
-                    "flex flex-col items-center justify-center w-full sm:w-auto sm:flex-1 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
-                    isProcessingImage ? "opacity-50 cursor-not-allowed" : ""
-                  )}
-                  style={{ minHeight: '60px' }} // Ensure minimum height
-                >
-                  <Upload className="h-6 w-6 text-gray-500 dark:text-gray-400 mb-1" />
                   <span className="text-sm text-gray-500 dark:text-gray-400 text-center">
                     {selectedCardIndices.length > 1
                       ? `${t("action.clickOrDropToUpload")} (${selectedCardIndices.length} スロット選択中)`
