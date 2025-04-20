@@ -7,7 +7,7 @@ import { ArrowRight, ImageIcon, Printer, Save } from "lucide-react";
 import { Header } from "@/components/header";
 import { useTranslation } from "@/lib/i18n";
 import { FallingCardsCanvas } from "@/components/FallingCardsCanvas";
-// Removed duplicate import: import { useTranslation } from "@/lib/i18n";
+import { useTranslation } from "@/lib/i18n";
 
 export default function Home() {
   const { t } = useTranslation()
