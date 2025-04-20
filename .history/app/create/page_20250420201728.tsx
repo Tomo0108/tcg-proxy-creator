@@ -45,7 +45,7 @@ export default function CreatePage() {
   const { toast } = useToast(); // Correct usage with the imported hook
 
   // --- Settings State ---
-  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("yugioh") // Default to yugioh
+  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("pokemon")
   const [spacing, setSpacing] = useState(5)
   const [cmykConversion, setCmykConversion] = useState(false)
   const [cmykMode, setCmykMode] = useState<"simple" | "accurate">("simple")
@@ -417,33 +417,17 @@ export default function CreatePage() {
                <CardContent className="p-6">
                  <h2 className="text-xl font-semibold mb-4">{t("create.export.title")}</h2> {/* Corrected key */}
                  <div className="space-y-4">
-                   {/* Export Scope Toggle Group */}
+                   {/* Export Scope Toggle Button */}
                    <div>
-                     {/* Removed Label for export scope */}
-                     <ToggleGroup
-                       id="export-scope"
-                       type="single"
-                       value={exportScope}
-                       onValueChange={(value) => { if (value) setExportScope(value as 'current' | 'all'); }}
-                       className="grid grid-cols-2" // Removed gap-2 to make items touch
+                     <Label className="mb-1 block">{t("export.scope")}</Label>
+                     <Button
+                       variant="outline" // Use outline for better visibility in both modes
+                       onClick={() => setExportScope(prev => prev === 'current' ? 'all' : 'current')}
                        disabled={isExporting || isPrinting}
+                       className="w-full"
                      >
-                       {/* Apply specific styles for better visibility and connected look */}
-                       <ToggleGroupItem
-                         value="current"
-                         aria-label={t("export.scope.current")}
-                         className="rounded-r-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0" // Added border, adjusted styles, and focus ring
-                       >
-                         {t("export.scope.current")}
-                       </ToggleGroupItem>
-                       <ToggleGroupItem
-                         value="all"
-                         aria-label={t("export.scope.all")}
-                         className="rounded-l-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border border-l-0 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0" // Added border (no left border), adjusted styles, and focus ring
-                       >
-                         {t("export.scope.all")}
-                       </ToggleGroupItem>
-                     </ToggleGroup>
+                       {exportScope === 'current' ? t("export.scope.current") : t("export.scope.all")}
+                     </Button>
                    </div>
 
                    {/* Export Buttons */}

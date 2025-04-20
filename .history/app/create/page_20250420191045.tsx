@@ -45,7 +45,7 @@ export default function CreatePage() {
   const { toast } = useToast(); // Correct usage with the imported hook
 
   // --- Settings State ---
-  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("yugioh") // Default to yugioh
+  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("pokemon")
   const [spacing, setSpacing] = useState(5)
   const [cmykConversion, setCmykConversion] = useState(false)
   const [cmykMode, setCmykMode] = useState<"simple" | "accurate">("simple")
@@ -415,39 +415,90 @@ export default function CreatePage() {
              {/* --- Export/Print Controls (Moved Here) --- */}
              <Card className="border-gold-500 mt-6"> {/* Added gold border and margin */}
                <CardContent className="p-6">
-                 <h2 className="text-xl font-semibold mb-4">{t("create.export.title")}</h2> {/* Corrected key */}
+                 <h2 className="text-xl font-semibold mb-4">{t("export.title")}</h2>
                  <div className="space-y-4">
-                   {/* Export Scope Toggle Group */}
+                   {/* Export Scope Toggle */}
                    <div>
-                     {/* Removed Label for export scope */}
+                     <Label htmlFor="export-scope">{t("export.scope")}</Label>
                      <ToggleGroup
                        id="export-scope"
                        type="single"
                        value={exportScope}
                        onValueChange={(value) => { if (value) setExportScope(value as 'current' | 'all'); }}
-                       className="grid grid-cols-2" // Removed gap-2 to make items touch
+                       className="mt-1 grid grid-cols-2 gap-2"
+                       disabled={isExporting || isPrinting}
+                        <Download className="mr-2 h-4 w-4" /> PNG
+                      </Button>
+                      <Button
+                        onClick={handlePrint}
+                        disabled={isExporting || isPrinting}
+                        className="w-full border-gold-500" // Added gold border
+                      >
+                        <Printer className="mr-2 h-4 w-4" /> {t("action.print")}
+                      </Button>
+                    </div>
+                    {(isExporting || isPrinting) && (
+                      <p className="text-sm text-muted-foreground text-center animate-pulse">
+                        {isPrinting ? t("status.printing") : t("status.exporting")}...
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              {/* --- End Export/Print Controls --- */}
+
+            </div>
+
+            {/* Integrated Card Editor - Right Side */}
+            <div className="lg:col-span-3">
+            <IntegratedCardEditor
+              cardType={cardType}
+              spacing={spacing}
+              cmykConversion={cmykConversion}
+              // Pass the cards for the current page
+              cards={pages[currentPageIndex] || []} // Ensure fallback to empty array
+              onCardUpdate={handleCardUpdate}
+              onCardRemove={handleCardRemove}
+              // Pass the reset function for the current page
+              onResetCards={handleResetCurrentPage} // Rename prop for clarity? Or keep as is? Let's keep for now.
+              // Removed exportQuality, cmykMode, allPages, exportScope, setExportScope props
+              // Pass page-related props
+              currentPageIndex={currentPageIndex}
+              pageCount={pages.length}
+              setCurrentPageIndex={setCurrentPageIndex}
+              addPage={addPage}
+              deletePage={deletePage}
+               // Pass all pages for potential multi-page export (if needed later) - Re-added for context, but IntegratedCardEditor won't use it directly for export buttons
+               allPages={pages}
+             />
+
+             {/* --- Export/Print Controls (Moved Here) --- */}
+             <Card className="border-gold-500 mt-6"> {/* Added gold border and margin */}
+               <CardContent className="p-6">
+                 <h2 className="text-xl font-semibold mb-4">{t("export.title")}</h2>
+                 <div className="space-y-4">
+                   {/* Export Scope Toggle */}
+                   <div>
+                     <Label htmlFor="export-scope">{t("export.scope")}</Label>
+                     <ToggleGroup
+                       id="export-scope"
+                       type="single"
+                       value={exportScope}
+                       onValueChange={(value) => { if (value) setExportScope(value as 'current' | 'all'); }}
+                       className="mt-1 grid grid-cols-2 gap-2"
                        disabled={isExporting || isPrinting}
                      >
-                       {/* Apply specific styles for better visibility and connected look */}
-                       <ToggleGroupItem
-                         value="current"
-                         aria-label={t("export.scope.current")}
-                         className="rounded-r-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0" // Added border, adjusted styles, and focus ring
-                       >
-                         {t("export.scope.current")}
+                       <ToggleGroupItem value="current" aria-label={t("export.scopeCurrent")}>
+                         {t("export.scopeCurrent")}
                        </ToggleGroupItem>
-                       <ToggleGroupItem
-                         value="all"
-                         aria-label={t("export.scope.all")}
-                         className="rounded-l-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border border-l-0 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0" // Added border (no left border), adjusted styles, and focus ring
-                       >
-                         {t("export.scope.all")}
+                       <ToggleGroupItem value="all" aria-label={t("export.scopeAll")}>
+                         {t("export.scopeAll")}
                        </ToggleGroupItem>
                      </ToggleGroup>
                    </div>
 
                    {/* Export Buttons */}
-                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4"> {/* Added margin top */}
+                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                      <Button
                        onClick={handleExportPDF}
                        disabled={isExporting || isPrinting}
@@ -482,8 +533,8 @@ export default function CreatePage() {
 
            </div>
          </div>
-       </div>
-       <Toaster />
-     </div>
-   )
- }
+      </div>
+      <Toaster />
+    </div>
+  )
+}

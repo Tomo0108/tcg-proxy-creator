@@ -15,7 +15,7 @@ type Translations = {
 const translations: Translations = {
   "app.title": {
     en: "TCG Proxy Creator",
-    ja: "TCG Proxy Creator",
+    ja: "TCGプロキシクリエーター",
   },
   "app.description": {
     en: "Create high-quality proxy cards for trading card games",
@@ -75,7 +75,7 @@ const translations: Translations = {
   },
   "home.hero.title": {
     en: "TCG Proxy Creator",
-    ja: "TCG Proxy Creator",
+    ja: "TCGプロキシクリエーター",
   },
   "home.hero.description": {
     en: "Create high quality data for printing TCG proxy cards",
@@ -111,7 +111,7 @@ const translations: Translations = {
   },
   "footer.copyright": {
     en: "© 2025 TCG Proxy Creator. All rights reserved.",
-    ja: "© 2025 TCG Proxy Creator. All rights reserved.",
+    ja: "© 2025 TCGプロキシクリエーター. All rights reserved.",
   },
   "footer.terms": {
     en: "Terms",
@@ -130,8 +130,8 @@ const translations: Translations = {
     ja: "設定",
   },
   "create.export.title": {
-    en: "Export",
-    ja: "出力",
+    en: "Export Options",
+    ja: "エクスポート設定",
   },
   "create.tabs.editor": {
     en: "Card Editor",
@@ -315,7 +315,7 @@ const translations: Translations = {
   },
   "action.resetAll": { // Changed meaning to "Reset Current Page"
     en: "Reset Page",
-    ja: "リセット",
+    ja: "ページをリセット",
   },
    "action.clickOrDropToUpload": {
      en: "Click or drag & drop to upload image",
@@ -368,35 +368,14 @@ const translations: Translations = {
      en: "Accurate",
       ja: "高精度",
     },
-    // Export Quality (Added)
-    "export.quality.label": {
-      en: "Output Quality",
-      ja: "出力品質",
-    },
-    "export.quality.standard": {
-      en: "Standard (300 DPI)",
-      ja: "標準 (300 DPI)",
-    },
-    "export.quality.high": {
-      en: "High Quality (450 DPI)",
-      ja: "高品質 (450 DPI)",
-    },
-    "export.quality.ultra": {
-      en: "Ultra High Quality (600 DPI)",
-      ja: "超高品質 (600 DPI)",
-    },
     // Export Scope (Existing + Added)
-    "export.scope": { // Added label key
-      en: "Export Scope",
-      ja: "出力範囲",
-    },
     "export.scope.current": {
       en: "Current Page",
-      ja: "現在のページ", // Already exists, ensure it's correct
+      ja: "現在のページ",
     },
     "export.scope.all": {
       en: "All Pages",
-      ja: "全てのページ", // Already exists, ensure it's correct
+      ja: "全ページ",
     },
     // Not Implemented Toast (Existing + Updated message)
     "toast.notImplementedTitle": {
@@ -406,15 +385,6 @@ const translations: Translations = {
     "toast.notImplementedDescAllPages": {
       en: "Exporting all pages as PNG is not yet supported. Please export the current page or use PDF.", // Updated message
       ja: "全ページのPNGエクスポートはまだサポートされていません。現在のページをエクスポートするか、PDFを使用してください。",
-    },
-    // Exporting Ultra Quality Toast (Added)
-    "toast.exportingUltraTitle": {
-      en: "Processing High Quality Export",
-      ja: "高品質出力処理中",
-    },
-    "toast.exportingUltraDesc": {
-      en: "Generating high-resolution files may take some time. Please wait.",
-      ja: "高解像度ファイルの生成には時間がかかる場合があります。しばらくお待ちください。",
     },
     // Removed unused keys: action.uploadImage, action.uploadToSelected (These were placeholders and not actually used)
   }
@@ -464,8 +434,7 @@ if (typeof window !== 'undefined') {
    // Modify t function to accept replacements
    const t = (key: string, replacements?: Record<string, string | number>): string => {
      let translation = key; // Default to key if not found
-     // Use hasOwnProperty for a more robust check
-     if (Object.prototype.hasOwnProperty.call(translations, key)) {
+     if (translations[key]) {
        translation = translations[key][locale];
      } else {
        console.warn(`Translation missing for key: ${key}`);
@@ -473,8 +442,11 @@ if (typeof window !== 'undefined') {
        const parts = key.split('.');
        if (parts.length > 1) {
          const lastPart = parts.pop();
-         // Removed parentKey logic as it's unlikely with current structure
-         if (lastPart) {
+         const parentKey = parts.join('.');
+         if (translations[parentKey] && typeof translations[parentKey][locale] === 'object') {
+            // This case is unlikely with the current flat structure but added for robustness
+            // translation = (translations[parentKey][locale] as any)[lastPart || ''] || key;
+         } else if (lastPart) {
             // Simple fallback: return the last part of the key capitalized
             translation = lastPart.charAt(0).toUpperCase() + lastPart.slice(1);
          }

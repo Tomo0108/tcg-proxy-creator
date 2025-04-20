@@ -386,17 +386,13 @@ const translations: Translations = {
       ja: "超高品質 (600 DPI)",
     },
     // Export Scope (Existing + Added)
-    "export.scope": { // Added label key
-      en: "Export Scope",
-      ja: "出力範囲",
-    },
     "export.scope.current": {
       en: "Current Page",
-      ja: "現在のページ", // Already exists, ensure it's correct
+      ja: "現在のページ",
     },
     "export.scope.all": {
       en: "All Pages",
-      ja: "全てのページ", // Already exists, ensure it's correct
+      ja: "全ページ",
     },
     // Not Implemented Toast (Existing + Updated message)
     "toast.notImplementedTitle": {

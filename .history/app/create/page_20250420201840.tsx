@@ -45,7 +45,7 @@ export default function CreatePage() {
   const { toast } = useToast(); // Correct usage with the imported hook
 
   // --- Settings State ---
-  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("yugioh") // Default to yugioh
+  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("pokemon")
   const [spacing, setSpacing] = useState(5)
   const [cmykConversion, setCmykConversion] = useState(false)
   const [cmykMode, setCmykMode] = useState<"simple" | "accurate">("simple")
@@ -419,7 +419,7 @@ export default function CreatePage() {
                  <div className="space-y-4">
                    {/* Export Scope Toggle Group */}
                    <div>
-                     {/* Removed Label for export scope */}
+                     <Label htmlFor="export-scope" className="mb-1 block">{t("export.scope")}</Label>
                      <ToggleGroup
                        id="export-scope"
                        type="single"
@@ -432,14 +432,14 @@ export default function CreatePage() {
                        <ToggleGroupItem
                          value="current"
                          aria-label={t("export.scope.current")}
-                         className="rounded-r-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0" // Added border, adjusted styles, and focus ring
+                         className="rounded-r-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border" // Added border and adjusted styles
                        >
                          {t("export.scope.current")}
                        </ToggleGroupItem>
                        <ToggleGroupItem
                          value="all"
                          aria-label={t("export.scope.all")}
-                         className="rounded-l-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border border-l-0 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0" // Added border (no left border), adjusted styles, and focus ring
+                         className="rounded-l-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border border-l-0" // Added border (no left border) and adjusted styles
                        >
                          {t("export.scope.all")}
                        </ToggleGroupItem>

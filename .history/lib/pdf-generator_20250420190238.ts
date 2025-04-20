@@ -5,7 +5,7 @@ import { jsPDF } from "jspdf"; // Import jsPDF directly
 import { createPrintReadyCanvas, renderHighQualityCards, applyCmykProfile, loadCmykProfile } from "./cmyk-conversion";
 
 // --- Interfaces ---
-export interface Dimensions { // Add export
+interface Dimensions {
   a4Width: number;
   a4Height: number;
   cardWidth: number;

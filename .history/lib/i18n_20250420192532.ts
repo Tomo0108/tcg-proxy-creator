@@ -386,17 +386,13 @@ const translations: Translations = {
       ja: "超高品質 (600 DPI)",
     },
     // Export Scope (Existing + Added)
-    "export.scope": { // Added label key
-      en: "Export Scope",
-      ja: "出力範囲",
-    },
     "export.scope.current": {
       en: "Current Page",
-      ja: "現在のページ", // Already exists, ensure it's correct
+      ja: "現在のページ",
     },
     "export.scope.all": {
       en: "All Pages",
-      ja: "全てのページ", // Already exists, ensure it's correct
+      ja: "全ページ",
     },
     // Not Implemented Toast (Existing + Updated message)
     "toast.notImplementedTitle": {
@@ -464,8 +460,7 @@ if (typeof window !== 'undefined') {
    // Modify t function to accept replacements
    const t = (key: string, replacements?: Record<string, string | number>): string => {
      let translation = key; // Default to key if not found
-     // Use hasOwnProperty for a more robust check
-     if (Object.prototype.hasOwnProperty.call(translations, key)) {
+     if (translations[key]) {
        translation = translations[key][locale];
      } else {
        console.warn(`Translation missing for key: ${key}`);
@@ -473,8 +468,11 @@ if (typeof window !== 'undefined') {
        const parts = key.split('.');
        if (parts.length > 1) {
          const lastPart = parts.pop();
-         // Removed parentKey logic as it's unlikely with current structure
-         if (lastPart) {
+         const parentKey = parts.join('.');
+         if (translations[parentKey] && typeof translations[parentKey][locale] === 'object') {
+            // This case is unlikely with the current flat structure but added for robustness
+            // translation = (translations[parentKey][locale] as any)[lastPart || ''] || key;
+         } else if (lastPart) {
             // Simple fallback: return the last part of the key capitalized
             translation = lastPart.charAt(0).toUpperCase() + lastPart.slice(1);
          }

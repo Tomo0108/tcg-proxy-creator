@@ -22,7 +22,7 @@ import { useMobileDetect } from "@/hooks/use-mobile"
 interface IntegratedCardEditorProps {
   cardType: string;
   spacing: number;
-  cmykConversion: boolean; // Keep cmykConversion prop for now, might be needed by parent
+  cmykConversion: boolean;
   cards: (CardData | null)[]; // Cards for the CURRENT page
   onCardUpdate: (card: CardData, index: number) => void; // Update card on the CURRENT page
   onCardRemove: (index: number) => void; // Remove card from the CURRENT page
@@ -43,7 +43,7 @@ const LONG_PRESS_DURATION = 500; // Long press duration in ms
 export function IntegratedCardEditor({
   cardType,
   spacing,
-  cmykConversion, // Keep cmykConversion prop for now
+  cmykConversion,
   cards, // Represents cards for the currentPageIndex
   onCardUpdate,
   onCardRemove,
@@ -351,6 +351,12 @@ export function IntegratedCardEditor({
         img.onload = () => {
           const drawX = drawXBg; const drawY = drawYBg;
           const drawCardWidth = drawCardWidthBg; const drawCardHeight = drawCardHeightBg;
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const drawX = drawXBg; const drawY = drawYBg;
+          const drawCardWidth = drawCardWidthBg; const drawCardHeight = drawCardHeightBg;
           if (drawCardWidth <= 0 || drawCardHeight <= 0) { resolve(); return; }
 
           ctx.save();
@@ -437,7 +443,194 @@ export function IntegratedCardEditor({
     }
   }, [containerWidth, renderCanvas]); // renderCanvas depends on 'cards' prop now
 
-  // Removed getDpiForQuality, handleExportPDF, handleExportPNG, handlePrint, downloadFile functions
+  // Get DPI for export based on quality prop
+  const getDpiForQuality = useCallback(() => {
+    switch (exportQuality) {
+      case "standard": return 300;
+      case "high": return 450;
+      case "ultra": return 600;
+      default: return 300;
+    }
+  }, [exportQuality]);
+
+   // --- Export Handlers ---
+   const handleExportPDF = async () => {
+     if (containerWidth <= 0) {
+         // toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
+         return;
+     }
+     setIsExporting(true);
+     try {
+       const pagesToExport = exportScope === 'all' ? allPages : [cards]; // Use allPages or current page's cards
+       const exportDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
+       const exportDpi = getDpiForQuality();
+
+       if (exportScope === 'all') {
+         // toast({ title: t("toast.exportingAllTitle"), description: t("toast.exportingAllDescPdf") });
+       } else if (exportQuality === "ultra") {
+          // toast({ title: "高品質出力処理中", description: "高解像度PDFの生成には時間がかかる場合があります。" });
+       }
+
+       const options: PdfExportOptions = { // Use PdfExportOptions type
+         pages: pagesToExport,
+         spacing, cardType, cmykConversion, cmykMode,
+         dpi: exportDpi,
+         dimensions: exportDimensions,
+       };
+       const pdfBlob = await generatePDF(options);
+       downloadFile(pdfBlob, `tcg-proxy-cards-${exportScope}-${exportDpi}dpi.pdf`);
+       // toast({ title: t("toast.pdfSuccess"), description: t("toast.pdfSuccessDesc") });
+     } catch (error) {
+      console.error("PDF export failed:", error);
+      // toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+   }
+
+   const handleExportPNG = async () => {
+      const currentCanvas = canvasRef.current;
+      if (!currentCanvas || containerWidth <= 0) {
+         // toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
+         return;
+      }
+      if (exportScope === 'all') {
+        // toast({ title: t("toast.notImplementedTitle"), description: t("toast.notImplementedDescAllPages"), variant: "default" });
+        return;
+      }
+
+      setIsExporting(true);
+      try {
+        if (exportQuality === "ultra") {
+           // toast({ title: "高品質出力処理中", description: "高解像度PNGの生成には時間がかかる場合があります。" });
+         }
+         // Filter out null cards from the CURRENT page ('cards' prop)
+         const validCards = cards.filter((card): card is CardData => card !== null);
+         const exportDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
+         const exportDpi = getDpiForQuality();
+
+         const options: PngExportOptions = { // Use PngExportOptions type
+           cards: validCards, // Pass only valid cards from the current page
+           spacing, cardType, cmykConversion, cmykMode,
+           dpi: exportDpi,
+           canvas: currentCanvas, // Pass preview canvas for fallback
+           dimensions: exportDimensions,
+         };
+        const pngBlob = await generatePNG(options);
+        downloadFile(pngBlob, `tcg-proxy-cards-page${currentPageIndex + 1}-${exportDpi}dpi.png`);
+        // toast({ title: t("toast.pngSuccess"), description: t("toast.pngSuccessDesc") });
+      } catch (error) {
+        console.error("PNG export failed:", error);
+        // toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
+      } finally {
+        setIsExporting(false);
+      }
+   }
+   // --- End Export Handlers ---
+
+   // --- Print Handler ---
+   const handlePrint = async () => {
+     if (isPrinting || isExporting || containerWidth <= 0) {
+       // toast({ title: "印刷不可", description: "現在他の処理を実行中か、プレビューの準備ができていません。", variant: "destructive" });
+       return;
+     }
+     setIsPrinting(true);
+     // toast({ title: "印刷準備中", description: "高品質な印刷用データを生成しています..." });
+
+     let printFrame: HTMLIFrameElement | null = null;
+     let pdfUrl: string | null = null;
+
+     try {
+       const pagesToPrint = exportScope === 'all' ? allPages : [cards];
+       const printDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
+       const printDpi = getDpiForQuality(); // Use export quality for printing
+
+       const options: PdfExportOptions = {
+         pages: pagesToPrint,
+         spacing, cardType, cmykConversion, cmykMode,
+         dpi: printDpi,
+         dimensions: printDimensions,
+       };
+
+       const pdfBlob = await generatePDF(options);
+       pdfUrl = URL.createObjectURL(pdfBlob);
+
+       printFrame = document.createElement('iframe');
+       printFrame.style.position = 'absolute';
+       printFrame.style.width = '0';
+       printFrame.style.height = '0';
+       printFrame.style.border = '0';
+       printFrame.style.visibility = 'hidden';
+       printFrame.src = pdfUrl;
+
+       const handleLoad = () => {
+         try {
+           if (printFrame?.contentWindow) {
+             printFrame.contentWindow.focus(); // Required for some browsers
+             printFrame.contentWindow.print();
+             // Cleanup is tricky because print dialog is modal.
+             // Removing automatic cleanup to prevent dialog from closing prematurely.
+             // Resource leak might occur, but browser should handle on tab close.
+             // setTimeout(() => { // Remove or comment out setTimeout
+               // if (printFrame) {
+               //   document.body.removeChild(printFrame); // Comment out cleanup
+               //   printFrame = null;
+               // }
+               // if (pdfUrl) {
+               //   URL.revokeObjectURL(pdfUrl); // Comment out cleanup
+               //   pdfUrl = null;
+               // }
+               setIsPrinting(false); // Keep resetting state
+               // toast({ title: "印刷準備完了", description: "印刷ダイアログが表示されました。" }); // Keep toast
+             // }, 2000); // Remove or comment out setTimeout
+           } else {
+             throw new Error("印刷フレームのコンテンツが見つかりません。");
+           }
+         } catch (printError) {
+           console.error("Printing failed:", printError);
+           // toast({ title: "印刷エラー", description: `印刷の実行に失敗しました: ${printError instanceof Error ? printError.message : t("toast.unknownError")}`, variant: "destructive" });
+           // Cleanup on error
+           if (printFrame) document.body.removeChild(printFrame);
+           if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+           setIsPrinting(false);
+         }
+       };
+
+       const handleError = () => {
+         console.error("Failed to load PDF in iframe.");
+         // toast({ title: "印刷準備エラー", description: "印刷用PDFの読み込みに失敗しました。", variant: "destructive" });
+         if (printFrame) document.body.removeChild(printFrame);
+         if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+         setIsPrinting(false);
+       };
+
+       printFrame.addEventListener('load', handleLoad);
+       printFrame.addEventListener('error', handleError);
+
+       document.body.appendChild(printFrame);
+
+     } catch (error) {
+       console.error("PDF generation for printing failed:", error);
+       // toast({ title: "印刷準備エラー", description: `印刷用PDFの生成に失敗しました: ${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
+       // Ensure cleanup even if PDF generation fails
+       if (printFrame && printFrame.parentNode) document.body.removeChild(printFrame);
+       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+       setIsPrinting(false);
+     }
+   };
+   // --- End Print Handler ---
+
+  // File download helper
+  const downloadFile = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   // Calculate pixel values for styles (memoized)
   const overlayStyles = useMemo(() => {
@@ -641,14 +834,14 @@ export function IntegratedCardEditor({
                   <span className="text-sm text-gray-500 dark:text-gray-400 text-center">
                     {selectedCardIndices.length > 1
                       ? `${t("action.clickOrDropToUpload")} (${selectedCardIndices.length} スロット選択中)`
-                       : t("action.clickOrDropToUpload")}
-                  </span>
-               </div>
+                        : t("action.clickOrDropToUpload")}
+                   </span>
+                </div>
 
-               {/* Removed Export/Print Controls Section */}
-             </div>
-           </CardContent>
-        </Card>
+                {/* Removed Export/Print Controls Section */}
+              </div>
+            </CardContent>
+         </Card>
       </div>
     </div>
   );

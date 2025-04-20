@@ -4,8 +4,7 @@ import { useRef, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Printer, Download, Trash2 } from "lucide-react"
-// Import specific types from pdf-generator
-import { generatePDF, generatePNG, PdfExportOptions, PngExportOptions } from "@/lib/pdf-generator"
+import { generatePDF, generatePNG } from "@/lib/pdf-generator"
 import { toast } from "@/components/ui/use-toast"
 import { useTranslation } from "@/lib/i18n"
 

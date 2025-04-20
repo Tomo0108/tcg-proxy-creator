@@ -4,20 +4,18 @@ import { useRef, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Printer, Download, Trash2 } from "lucide-react"
-// Import specific types from pdf-generator
-import { generatePDF, generatePNG, PdfExportOptions, PngExportOptions } from "@/lib/pdf-generator"
+import { generatePDF, generatePNG } from "@/lib/pdf-generator"
 import { toast } from "@/components/ui/use-toast"
 import { useTranslation } from "@/lib/i18n"
 
 interface PrintLayoutProps {
-  cards: any[] // Consider using CardData[] if possible
+  cards: any[]
   spacing: number
   cardType: string
   cmykConversion: boolean
-  cmykMode: "simple" | "accurate" // Add cmykMode prop
 }
 
-export function PrintLayout({ cards, spacing, cardType, cmykConversion, cmykMode }: PrintLayoutProps) { // Add cmykMode to destructuring
+export function PrintLayout({ cards, spacing, cardType, cmykConversion }: PrintLayoutProps) {
   const { t } = useTranslation()
   const printRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -165,23 +163,20 @@ export function PrintLayout({ cards, spacing, cardType, cmykConversion, cmykMode
     try {
       // Show toast for high quality export
       if (exportQuality === "ultra") {
-        // toast({
-        //   title: "高品質出力処理中",
-        //   description: "高解像度PDFの生成には時間がかかる場合があります。しばらくお待ちください。",
-        // })
+        toast({
+          title: "高品質出力処理中",
+          description: "高解像度PDFの生成には時間がかかる場合があります。しばらくお待ちください。",
+        })
       }
 
       // Generate PDF
-      // Filter out null cards and wrap in a single page array
-      const validCards = cards.filter(card => card !== null);
-      const options: PdfExportOptions = { // Use PdfExportOptions type
-        pages: [validCards], // Pass cards as a single page
+      const options = {
+        cards,
         spacing,
         cardType,
         cmykConversion,
-        cmykMode, // Add cmykMode
         dpi: getDpiForQuality(),
-        // canvas: canvasRef.current, // canvas is not needed for PDF generation
+        canvas: canvasRef.current,
         dimensions: {
           a4Width,
           a4Height,
@@ -196,17 +191,17 @@ export function PrintLayout({ cards, spacing, cardType, cmykConversion, cmykMode
 
       const pdfBlob = await generatePDF(options)
       downloadFile(pdfBlob, "tcg-proxy-cards.pdf")
-      // toast({
-      //   title: t("toast.pdfSuccess"),
-      //   description: t("toast.pdfSuccessDesc"),
-      // })
+      toast({
+        title: t("toast.pdfSuccess"),
+        description: t("toast.pdfSuccessDesc"),
+      })
     } catch (error) {
       console.error("PDF export failed:", error)
-      // toast({
-      //   title: t("toast.exportError"),
-      //   description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("unknown error")}`,
-      //   variant: "destructive",
-      // })
+      toast({
+        title: t("toast.exportError"),
+        description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("unknown error")}`,
+        variant: "destructive",
+      })
     } finally {
       setIsExporting(false)
     }
@@ -219,23 +214,20 @@ export function PrintLayout({ cards, spacing, cardType, cmykConversion, cmykMode
     try {
       // Show toast for high quality export
       if (exportQuality === "ultra") {
-        // toast({
-        //   title: "高品質出力処理中",
-        //   description: "高解像度PNGの生成には時間がかかる場合があります。しばらくお待ちください。",
-        // })
+        toast({
+          title: "高品質出力処理中",
+          description: "高解像度PNGの生成には時間がかかる場合があります。しばらくお待ちください。",
+        })
       }
 
       // Generate PNG
-      // Filter out null cards
-      const validCardsForPng = cards.filter(card => card !== null);
-      const options: PngExportOptions = { // Use PngExportOptions type
-        cards: validCardsForPng, // Pass filtered cards
+      const options = {
+        cards,
         spacing,
         cardType,
         cmykConversion,
-        cmykMode, // Add cmykMode
         dpi: getDpiForQuality(),
-        canvas: canvasRef.current, // Keep canvas for PNG fallback/reference
+        canvas: canvasRef.current,
         dimensions: {
           a4Width,
           a4Height,
@@ -250,17 +242,17 @@ export function PrintLayout({ cards, spacing, cardType, cmykConversion, cmykMode
 
       const pngBlob = await generatePNG(options)
       downloadFile(pngBlob, "tcg-proxy-cards.png")
-      // toast({
-      //   title: t("toast.pngSuccess"),
-      //   description: t("toast.pngSuccessDesc"),
-      // })
+      toast({
+        title: t("toast.pngSuccess"),
+        description: t("toast.pngSuccessDesc"),
+      })
     } catch (error) {
       console.error("PNG export failed:", error)
-      // toast({
-      //   title: t("toast.exportError"),
-      //   description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("unknown error")}`,
-      //   variant: "destructive",
-      // })
+      toast({
+        title: t("toast.exportError"),
+        description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("unknown error")}`,
+        variant: "destructive",
+      })
     } finally {
       setIsExporting(false)
     }
@@ -283,10 +275,10 @@ export function PrintLayout({ cards, spacing, cardType, cmykConversion, cmykMode
     newCards[index] = null
     // Update the parent component's state
     // This is just a placeholder - in a real implementation, we would call a function passed from the parent
-    // toast({
-    //   title: t("toast.cardRemoved"),
-    //   description: t("toast.cardRemovedDesc"),
-    // })
+    toast({
+      title: t("toast.cardRemoved"),
+      description: t("toast.cardRemovedDesc"),
+    })
   }
 
   return (

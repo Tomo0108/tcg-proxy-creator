@@ -45,7 +45,7 @@ export default function CreatePage() {
   const { toast } = useToast(); // Correct usage with the imported hook
 
   // --- Settings State ---
-  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("yugioh") // Default to yugioh
+  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("pokemon")
   const [spacing, setSpacing] = useState(5)
   const [cmykConversion, setCmykConversion] = useState(false)
   const [cmykMode, setCmykMode] = useState<"simple" | "accurate">("simple")

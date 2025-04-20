@@ -7,35 +7,38 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
  import { Input } from "@/components/ui/input"
  import { Label } from "@/components/ui/label" // Keep Label import if used elsewhere, otherwise remove
- import { Upload, Trash2, RotateCcw, ChevronLeft, ChevronRight, PlusSquare } from "lucide-react" // Removed Download, Printer
+ import { Upload, Download, Printer, Trash2, RotateCcw, ChevronLeft, ChevronRight, PlusSquare } from "lucide-react"
  // Import specific types from pdf-generator
- import { CardData } from "@/lib/pdf-generator"; // Removed generatePDF, generatePNG, PdfExportOptions, PngExportOptions
+ import { CardData, generatePDF, generatePNG, PdfExportOptions, PngExportOptions } from "@/lib/pdf-generator";
 import { toast } from "@/components/ui/use-toast"
 import { useMobileDetect } from "@/hooks/use-mobile"
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
  import { cn } from "@/lib/utils"
  import { Plus, FileText } from "lucide-react" // Keep Plus, FileText if used
- // Removed ToggleGroup, ToggleGroupItem imports
+ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
  import { useTranslation } from "@/lib/i18n"; // Import useTranslation
 
 // Interface for props passed to this component
 interface IntegratedCardEditorProps {
   cardType: string;
   spacing: number;
-  cmykConversion: boolean; // Keep cmykConversion prop for now, might be needed by parent
+  cmykConversion: boolean;
   cards: (CardData | null)[]; // Cards for the CURRENT page
   onCardUpdate: (card: CardData, index: number) => void; // Update card on the CURRENT page
   onCardRemove: (index: number) => void; // Remove card from the CURRENT page
   onResetCards: () => void; // Reset the CURRENT page
-  // Removed exportQuality, cmykMode props
+  exportQuality: "standard" | "high" | "ultra";
+  cmykMode: "simple" | "accurate";
   // Page management props
   currentPageIndex: number;
   pageCount: number;
   setCurrentPageIndex: (index: number) => void;
   addPage: () => void;
   deletePage: () => void;
-  allPages: (CardData | null)[][]; // Keep if needed for other logic
-  // Removed exportScope, setExportScope props
+  allPages: (CardData | null)[][]; // All pages data for multi-page export
+  // Export scope props
+  exportScope: 'current' | 'all';
+  setExportScope: (scope: 'current' | 'all') => void;
 }
 
 const LONG_PRESS_DURATION = 500; // Long press duration in ms
@@ -43,12 +46,13 @@ const LONG_PRESS_DURATION = 500; // Long press duration in ms
 export function IntegratedCardEditor({
   cardType,
   spacing,
-  cmykConversion, // Keep cmykConversion prop for now
+  cmykConversion,
   cards, // Represents cards for the currentPageIndex
   onCardUpdate,
   onCardRemove,
   onResetCards, // Renamed prop, resets current page
-  // Removed exportQuality, cmykMode from destructuring
+  exportQuality,
+  cmykMode,
   // Page props
   currentPageIndex,
   pageCount,
@@ -56,14 +60,16 @@ export function IntegratedCardEditor({
   addPage,
   deletePage,
   allPages, // Receive all pages data
-  // Removed exportScope, setExportScope from destructuring
+  // Export scope props
+  exportScope,
+  setExportScope,
 }: IntegratedCardEditorProps) {
   const { t } = useTranslation(); // Initialize useTranslation
   const isMobile = useMobileDetect();
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
-  // Removed isExporting state
+  const [isExporting, setIsExporting] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  // Removed isPrinting state
+  const [isPrinting, setIsPrinting] = useState(false); // Add printing state
 
   // Refs
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -437,107 +443,100 @@ export function IntegratedCardEditor({
     }
   }, [containerWidth, renderCanvas]); // renderCanvas depends on 'cards' prop now
 
-  // Removed getDpiForQuality, handleExportPDF, handleExportPNG, handlePrint, downloadFile functions
+  // Get DPI for export based on quality prop
+  const getDpiForQuality = useCallback(() => {
+    switch (exportQuality) {
+      case "standard": return 300;
+      case "high": return 450;
+      case "ultra": return 600;
+      default: return 300;
+    }
+  }, [exportQuality]);
 
-  // Calculate pixel values for styles (memoized)
-  const overlayStyles = useMemo(() => {
-      if (containerWidth <= 0 || cardsPerRow <= 0 || cardsPerColumn <= 0) return { display: 'none' };
-      const paddingLeftPx = mmToPixels(marginXMM);
-      const paddingTopPx = mmToPixels(marginYMM);
-      const gridWidthPx = mmToPixels(gridWidthMM);
-      const gridHeightPx = mmToPixels(gridHeightMM);
-      if (![paddingLeftPx, paddingTopPx, gridWidthPx, gridHeightPx].every(Number.isFinite)) return { display: 'none' };
-      return {
-          paddingLeft: `${paddingLeftPx}px`, paddingTop: `${paddingTopPx}px`,
-          width: `${gridWidthPx}px`, height: `${gridHeightPx}px`,
-          pointerEvents: "none" as const,
-      };
-  }, [containerWidth, cardsPerRow, cardsPerColumn, marginXMM, marginYMM, gridWidthMM, gridHeightMM, mmToPixels]);
+   // --- Export Handlers ---
+   const handleExportPDF = async () => {
+     if (containerWidth <= 0) {
+         // toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
+         return;
+     }
+     setIsExporting(true);
+     try {
+       const pagesToExport = exportScope === 'all' ? allPages : [cards]; // Use allPages or current page's cards
+       const exportDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
+       const exportDpi = getDpiForQuality();
 
-  const gridStyles = useMemo(() => {
-      if (containerWidth <= 0 || cardsPerRow <= 0 || cardsPerColumn <= 0) return { display: 'none' };
-      const cardWidthPx = mmToPixels(cardWidthMM);
-      const cardHeightPx = mmToPixels(cardHeightMM);
-      const gapPx = mmToPixels(spacing);
-      if (![cardWidthPx, cardHeightPx, gapPx].every(v => Number.isFinite(v) && v >= 0)) return { display: 'none' };
-      if (cardWidthPx <= 0 || cardHeightPx <= 0) return { display: 'none' };
-      return {
-          gridTemplateColumns: `repeat(${cardsPerRow}, ${cardWidthPx}px)`,
-          gridTemplateRows: `repeat(${cardsPerColumn}, ${cardHeightPx}px)`,
-          gap: `${gapPx}px`,
-      };
-  }, [containerWidth, cardsPerRow, cardsPerColumn, cardWidthMM, cardHeightMM, spacing, mmToPixels]);
+       if (exportScope === 'all') {
+         // toast({ title: t("toast.exportingAllTitle"), description: t("toast.exportingAllDescPdf") });
+       } else if (exportQuality === "ultra") {
+          // toast({ title: "高品質出力処理中", description: "高解像度PDFの生成には時間がかかる場合があります。" });
+       }
 
-  // Component JSX
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-6">
-        <Card className="col-span-1 border-gold-500">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">{t("layout.preview")}</h3>
-              {/* Reset Button - Calls onResetCards prop */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                     <Button
-                       onClick={onResetCards} // Use prop
-                       className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-gray-900 dark:text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 sm:flex-none" // Removed sm:w-28
-                     >
-                       <RotateCcw className="h-4 w-4" />
-                      <span>{t("action.resetAll")}</span> {/* Text updated in i18n to "Reset Page" */}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>{t("action.resetAll")}</p></TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg overflow-hidden">
-              <div
-                ref={printRef}
-                className="relative bg-white dark:bg-gray-900 border rounded-lg mx-auto"
-                style={{
-                  width: "100%", aspectRatio: `${a4Width} / ${a4Height}`,
-                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)", overflow: "hidden",
-                  height: containerWidth > 0 ? `${(containerWidth / a4Width) * a4Height}px` : undefined,
-                  outline: containerWidth <= 0 ? '2px dashed red' : 'none',
-                }}
-              >
-                <canvas
-                  ref={canvasRef}
-                  id="print-layout-canvas"
-                  className="absolute top-0 left-0 w-full h-full"
-                  style={{ padding: 0, border: 'none', margin: 0, display: 'block' }}
-                />
-                {overlayStyles.display !== 'none' && gridStyles.display !== 'none' && (
-                  <div
-                    className="absolute top-0 left-0 w-full h-full z-10"
-                    style={overlayStyles}
-                  >
-                    <div className="grid h-full w-full" style={gridStyles}>
-                      {/* Multi-select hidden input */}
-                      <Input
-                        ref={(el) => { inputRefs.current[-1] = el; }}
-                        type="file" accept="image/*" className="hidden"
-                        onChange={(e) => handleFileChange(e, -1)}
-                      />
-                      {/* Grid Cells */}
-                      {Array(cardsPerRow * cardsPerColumn).fill(0).map((_, index) => (
-                        <div
-                          key={`card-slot-${currentPageIndex}-${index}`} // Add currentPageIndex to key for reactivity
-                          className={cn(
-                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10 select-none",
-                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : ""
-                          )}
-                          style={{ pointerEvents: "auto", touchAction: 'none' }}
-                          onPointerDown={() => handlePointerDown(index)}
-                          onPointerUp={() => handlePointerUp(index)}
-                          onPointerLeave={() => handlePointerLeave(index)}
-                          onContextMenu={(e) => e.preventDefault()}
-                        >
-                          {/* Individual hidden input */}
-                          <Input
-                            ref={(el) => { if (index >= 0 && index < (cardsPerRow * cardsPerColumn)) { inputRefs.current[index] = el; } }}
+       const options: PdfExportOptions = { // Use PdfExportOptions type
+         pages: pagesToExport,
+         spacing, cardType, cmykConversion, cmykMode,
+         dpi: exportDpi,
+         dimensions: exportDimensions,
+       };
+       const pdfBlob = await generatePDF(options);
+       downloadFile(pdfBlob, `tcg-proxy-cards-${exportScope}-${exportDpi}dpi.pdf`);
+       // toast({ title: t("toast.pdfSuccess"), description: t("toast.pdfSuccessDesc") });
+     } catch (error) {
+      console.error("PDF export failed:", error);
+      // toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+   }
+
+   const handleExportPNG = async () => {
+      const currentCanvas = canvasRef.current;
+      if (!currentCanvas || containerWidth <= 0) {
+         // toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
+         return;
+      }
+      if (exportScope === 'all') {
+        // toast({ title: t("toast.notImplementedTitle"), description: t("toast.notImplementedDescAllPages"), variant: "default" });
+        return;
+      }
+
+      setIsExporting(true);
+      try {
+        if (exportQuality === "ultra") {
+           // toast({ title: "高品質出力処理中", description: "高解像度PNGの生成には時間がかかる場合があります。" });
+         }
+         // Filter out null cards from the CURRENT page ('cards' prop)
+         const validCards = cards.filter((card): card is CardData => card !== null);
+         const exportDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
+         const exportDpi = getDpiForQuality();
+
+         const options: PngExportOptions = { // Use PngExportOptions type
+           cards: validCards, // Pass only valid cards from the current page
+           spacing, cardType, cmykConversion, cmykMode,
+           dpi: exportDpi,
+           canvas: currentCanvas, // Pass preview canvas for fallback
+           dimensions: exportDimensions,
+         };
+        const pngBlob = await generatePNG(options);
+        downloadFile(pngBlob, `tcg-proxy-cards-page${currentPageIndex + 1}-${exportDpi}dpi.png`);
+        // toast({ title: t("toast.pngSuccess"), description: t("toast.pngSuccessDesc") });
+      } catch (error) {
+        console.error("PNG export failed:", error);
+        // toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
+      } finally {
+        setIsExporting(false);
+      }
+   }
+   // --- End Export Handlers ---
+
+   // --- Print Handler ---
+   const handlePrint = async () => {
+     if (isPrinting || isExporting || containerWidth <= 0) {
+       // toast({ title: "印刷不可", description: "現在他の処理を実行中か、プレビューの準備ができていません。", variant: "destructive" });
+       return;
+     }
+     setIsPrinting(true);
+     // toast({ title: "印刷準備中", description: "高品質な印刷用データを生成しています..." });
+
                             type="file" accept="image/*" className="hidden"
                             onChange={(e) => handleFileChange(e, index)}
                            />

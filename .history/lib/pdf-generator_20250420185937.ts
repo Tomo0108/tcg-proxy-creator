@@ -5,7 +5,7 @@ import { jsPDF } from "jspdf"; // Import jsPDF directly
 import { createPrintReadyCanvas, renderHighQualityCards, applyCmykProfile, loadCmykProfile } from "./cmyk-conversion";
 
 // --- Interfaces ---
-export interface Dimensions { // Add export
+interface Dimensions {
   a4Width: number;
   a4Height: number;
   cardWidth: number;
@@ -256,15 +256,9 @@ export async function generatePDF(
        );
      } else {
       // Fallback to the old method using the preview canvas (lower quality)
-      // This should only happen if dimensions were NOT provided, which requires the canvas.
-      if (canvas) {
-        console.warn("Falling back to createPrintReadyCanvas for PNG generation (using preview canvas).");
-        // Apply simulation only in simple mode for PNG export as well
-        printCanvas = createPrintReadyCanvas(canvas, dpi, cmykConversion && cmykMode === 'simple'); // Use destructured canvas
-      } else {
-        // If dimensions were not provided AND canvas is missing, we cannot generate PNG.
-        throw new Error("PNG generation failed: Dimensions were not provided, and no fallback canvas was available.");
-      }
+      console.warn("Falling back to createPrintReadyCanvas for PNG generation (using preview canvas).");
+      // Apply simulation only in simple mode for PNG export as well
+      printCanvas = createPrintReadyCanvas(canvas, dpi, cmykConversion && cmykMode === 'simple'); // Use destructured canvas
     }
 
     // Convert the final canvas to PNG blob with maximum quality

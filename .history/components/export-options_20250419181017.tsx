@@ -7,13 +7,9 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Switch } from "@/components/ui/switch"
 import { Download } from "lucide-react"
-// Import necessary types from pdf-generator
-import { generatePDF, generatePNG, PdfExportOptions, PngExportOptions, CardData, Dimensions } from "@/lib/pdf-generator"
+import { generatePDF, generatePNG } from "@/lib/pdf-generator"
 import { toast } from "@/components/ui/use-toast"
 import { useTranslation } from "@/lib/i18n"
-// Assume these stores exist and provide the necessary state
-// import { useCardStore } from "@/stores/cardStore"; // Example import
-// import { useSettingsStore } from "@/stores/settingsStore"; // Example import
 
 interface ExportOptionsProps {
   cmykEnabled: boolean
@@ -25,19 +21,6 @@ export function ExportOptions({ cmykEnabled }: ExportOptionsProps) {
   const [highResolution, setHighResolution] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const [exportQuality, setExportQuality] = useState<"standard" | "high" | "ultra">("high")
-  // --- Placeholder State/Variables (Replace with actual Zustand store access) ---
-  // const { pages, currentPageIndex } = useCardStore(); // Example
-  // const { cardType, spacing, cmykMode } = useSettingsStore(); // Example
-  const pages: (CardData | null)[][] = [[null, null, null, null, null, null, null, null, null]]; // Placeholder: Array of pages
-  const currentPageIndex = 0; // Placeholder: Index of the current page
-  const cardType = "pokemon"; // Placeholder
-  const spacing = 5; // Placeholder
-  const cmykMode: "simple" | "accurate" = "simple"; // Placeholder
-  // Placeholder dimensions - these should be calculated based on cardType, etc.
-  const dimensions: Dimensions = {
-    a4Width: 210, a4Height: 297, cardWidth: 63, cardHeight: 88,
-    marginX: 10, marginY: 10, cardsPerRow: 3, cardsPerColumn: 3
-  }; // Placeholder
 
   // Get DPI based on quality setting
   const getDpiForQuality = () => {
@@ -73,45 +56,33 @@ export function ExportOptions({ cmykEnabled }: ExportOptionsProps) {
       // Show toast for high quality export
       if (exportQuality === "ultra") {
         toast({
-          title: t("toast.exportingUltraTitle"),
-          description: t("toast.exportingUltraDesc"),
+          title: "高品質出力処理中",
+          description: "高解像度ファイルの生成には時間がかかる場合があります。しばらくお待ちください。",
         })
       }
 
-      // Prepare options based on format
-      const dpi = getDpiForQuality();
-      let blob;
+      // Export options
+      const options = {
+        cards: [], // This would be populated with actual card data
+        spacing: 5,
+        cardType: "pokemon",
+        cmykConversion: cmykEnabled,
+        dpi: getDpiForQuality(),
+        canvas: printLayoutCanvas,
+      }
+
+      let blob
 
       if (exportFormat === "pdf") {
-        const pdfOptions: PdfExportOptions = {
-          pages: pages, // Use placeholder pages array
-          spacing: spacing, // Use placeholder spacing
-          cardType: cardType, // Use placeholder cardType
-          cmykConversion: cmykEnabled,
-          dpi: dpi,
-          dimensions: dimensions, // Use placeholder dimensions
-          cmykMode: cmykMode, // Use placeholder cmykMode
-        };
-        blob = await generatePDF(pdfOptions);
-        downloadFile(blob, "tcg-proxy-cards.pdf");
+        blob = await generatePDF(options)
+        downloadFile(blob, "tcg-proxy-cards.pdf")
         toast({
           title: t("toast.pdfSuccess"),
           description: t("toast.pdfSuccessDesc"),
-        });
+        })
       } else {
-        const currentCards = pages[currentPageIndex]?.filter((card): card is CardData => card !== null) || []; // Get cards for the current page
-        const pngOptions: PngExportOptions = {
-          cards: currentCards, // Use cards from the current page
-          spacing: spacing, // Use placeholder spacing
-          cardType: cardType, // Use placeholder cardType
-          cmykConversion: cmykEnabled,
-          dpi: dpi,
-          dimensions: dimensions, // Use placeholder dimensions
-          cmykMode: cmykMode, // Use placeholder cmykMode
-          canvas: printLayoutCanvas, // Pass the canvas for potential fallback
-        };
-        blob = await generatePNG(pngOptions);
-        downloadFile(blob, "tcg-proxy-cards.png");
+        blob = await generatePNG(options)
+        downloadFile(blob, "tcg-proxy-cards.png")
         toast({
           title: t("toast.pngSuccess"),
           description: t("toast.pngSuccessDesc"),
@@ -161,15 +132,15 @@ export function ExportOptions({ cmykEnabled }: ExportOptionsProps) {
           </div>
 
           <div>
-            <Label className="mb-2 block">{t("export.quality.label")}</Label>
+            <Label className="mb-2 block">出力品質</Label>
             <select
               className="w-full p-2 border rounded bg-background"
               value={exportQuality}
               onChange={(e) => setExportQuality(e.target.value as any)}
             >
-              <option value="standard">{t("export.quality.standard")}</option>
-              <option value="high">{t("export.quality.high")}</option>
-              <option value="ultra">{t("export.quality.ultra")}</option>
+              <option value="standard">標準 (300 DPI)</option>
+              <option value="high">高品質 (450 DPI)</option>
+              <option value="ultra">超高品質 (600 DPI)</option>
             </select>
           </div>
 

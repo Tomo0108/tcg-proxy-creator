@@ -396,7 +396,7 @@ const translations: Translations = {
     },
     "export.scope.all": {
       en: "All Pages",
-      ja: "全てのページ", // Already exists, ensure it's correct
+      ja: "全ページ", // Already exists, ensure it's correct
     },
     // Not Implemented Toast (Existing + Updated message)
     "toast.notImplementedTitle": {

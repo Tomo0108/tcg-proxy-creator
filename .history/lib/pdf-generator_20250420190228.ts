@@ -5,7 +5,7 @@ import { jsPDF } from "jspdf"; // Import jsPDF directly
 import { createPrintReadyCanvas, renderHighQualityCards, applyCmykProfile, loadCmykProfile } from "./cmyk-conversion";
 
 // --- Interfaces ---
-export interface Dimensions { // Add export
+interface Dimensions {
   a4Width: number;
   a4Height: number;
   cardWidth: number;
@@ -25,6 +25,7 @@ export interface CardData {
   position: { x: number; y: number };
 }
 
+// Options specific to PDF export (multi-page)
 // Options specific to PDF export (multi-page)
 export interface PdfExportOptions { // Add export
   pages: (CardData | null)[][]; // Array of pages, each page is an array of CardData or null

@@ -7,35 +7,38 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
  import { Input } from "@/components/ui/input"
  import { Label } from "@/components/ui/label" // Keep Label import if used elsewhere, otherwise remove
- import { Upload, Trash2, RotateCcw, ChevronLeft, ChevronRight, PlusSquare } from "lucide-react" // Removed Download, Printer
+ import { Upload, Download, Printer, Trash2, RotateCcw, ChevronLeft, ChevronRight, PlusSquare } from "lucide-react"
  // Import specific types from pdf-generator
- import { CardData } from "@/lib/pdf-generator"; // Removed generatePDF, generatePNG, PdfExportOptions, PngExportOptions
+ import { CardData, generatePDF, generatePNG, PdfExportOptions, PngExportOptions } from "@/lib/pdf-generator";
 import { toast } from "@/components/ui/use-toast"
 import { useMobileDetect } from "@/hooks/use-mobile"
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
  import { cn } from "@/lib/utils"
  import { Plus, FileText } from "lucide-react" // Keep Plus, FileText if used
- // Removed ToggleGroup, ToggleGroupItem imports
+ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
  import { useTranslation } from "@/lib/i18n"; // Import useTranslation
 
 // Interface for props passed to this component
 interface IntegratedCardEditorProps {
   cardType: string;
   spacing: number;
-  cmykConversion: boolean; // Keep cmykConversion prop for now, might be needed by parent
+  cmykConversion: boolean;
   cards: (CardData | null)[]; // Cards for the CURRENT page
   onCardUpdate: (card: CardData, index: number) => void; // Update card on the CURRENT page
   onCardRemove: (index: number) => void; // Remove card from the CURRENT page
   onResetCards: () => void; // Reset the CURRENT page
-  // Removed exportQuality, cmykMode props
+  exportQuality: "standard" | "high" | "ultra";
+  cmykMode: "simple" | "accurate";
   // Page management props
   currentPageIndex: number;
   pageCount: number;
   setCurrentPageIndex: (index: number) => void;
   addPage: () => void;
   deletePage: () => void;
-  allPages: (CardData | null)[][]; // Keep if needed for other logic
-  // Removed exportScope, setExportScope props
+  allPages: (CardData | null)[][]; // All pages data for multi-page export
+  // Export scope props
+  exportScope: 'current' | 'all';
+  setExportScope: (scope: 'current' | 'all') => void;
 }
 
 const LONG_PRESS_DURATION = 500; // Long press duration in ms
@@ -43,12 +46,13 @@ const LONG_PRESS_DURATION = 500; // Long press duration in ms
 export function IntegratedCardEditor({
   cardType,
   spacing,
-  cmykConversion, // Keep cmykConversion prop for now
+  cmykConversion,
   cards, // Represents cards for the currentPageIndex
   onCardUpdate,
   onCardRemove,
   onResetCards, // Renamed prop, resets current page
-  // Removed exportQuality, cmykMode from destructuring
+  exportQuality,
+  cmykMode,
   // Page props
   currentPageIndex,
   pageCount,
@@ -56,23 +60,18 @@ export function IntegratedCardEditor({
   addPage,
   deletePage,
   allPages, // Receive all pages data
-  // Removed exportScope, setExportScope from destructuring
+  // Export scope props
+  exportScope,
+  setExportScope,
 }: IntegratedCardEditorProps) {
   const { t } = useTranslation(); // Initialize useTranslation
   const isMobile = useMobileDetect();
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
-  // Removed isExporting state
+  const [isExporting, setIsExporting] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  // Removed isPrinting state
+  const [isPrinting, setIsPrinting] = useState(false); // Add printing state
 
   // Refs
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const uploadInputRef = useRef<HTMLInputElement | null>(null);
-  const printRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-  const isLongPressing = useRef<boolean>(false);
-  const uploadTargetIndicesRef = useRef<number[] | null>(null);
 
   // State for container width
   const [containerWidth, setContainerWidth] = useState(0);

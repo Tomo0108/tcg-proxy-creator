@@ -7,35 +7,38 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
  import { Input } from "@/components/ui/input"
  import { Label } from "@/components/ui/label" // Keep Label import if used elsewhere, otherwise remove
- import { Upload, Trash2, RotateCcw, ChevronLeft, ChevronRight, PlusSquare } from "lucide-react" // Removed Download, Printer
+ import { Upload, Download, Printer, Trash2, RotateCcw, ChevronLeft, ChevronRight, PlusSquare } from "lucide-react"
  // Import specific types from pdf-generator
- import { CardData } from "@/lib/pdf-generator"; // Removed generatePDF, generatePNG, PdfExportOptions, PngExportOptions
+ import { CardData, generatePDF, generatePNG, PdfExportOptions, PngExportOptions } from "@/lib/pdf-generator";
 import { toast } from "@/components/ui/use-toast"
 import { useMobileDetect } from "@/hooks/use-mobile"
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
  import { cn } from "@/lib/utils"
  import { Plus, FileText } from "lucide-react" // Keep Plus, FileText if used
- // Removed ToggleGroup, ToggleGroupItem imports
+ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
  import { useTranslation } from "@/lib/i18n"; // Import useTranslation
 
 // Interface for props passed to this component
 interface IntegratedCardEditorProps {
   cardType: string;
   spacing: number;
-  cmykConversion: boolean; // Keep cmykConversion prop for now, might be needed by parent
+  cmykConversion: boolean;
   cards: (CardData | null)[]; // Cards for the CURRENT page
   onCardUpdate: (card: CardData, index: number) => void; // Update card on the CURRENT page
   onCardRemove: (index: number) => void; // Remove card from the CURRENT page
   onResetCards: () => void; // Reset the CURRENT page
-  // Removed exportQuality, cmykMode props
+  exportQuality: "standard" | "high" | "ultra";
+  cmykMode: "simple" | "accurate";
   // Page management props
   currentPageIndex: number;
   pageCount: number;
   setCurrentPageIndex: (index: number) => void;
   addPage: () => void;
   deletePage: () => void;
-  allPages: (CardData | null)[][]; // Keep if needed for other logic
-  // Removed exportScope, setExportScope props
+  allPages: (CardData | null)[][]; // All pages data for multi-page export
+  // Export scope props
+  exportScope: 'current' | 'all';
+  setExportScope: (scope: 'current' | 'all') => void;
 }
 
 const LONG_PRESS_DURATION = 500; // Long press duration in ms
@@ -43,12 +46,13 @@ const LONG_PRESS_DURATION = 500; // Long press duration in ms
 export function IntegratedCardEditor({
   cardType,
   spacing,
-  cmykConversion, // Keep cmykConversion prop for now
+  cmykConversion,
   cards, // Represents cards for the currentPageIndex
   onCardUpdate,
   onCardRemove,
   onResetCards, // Renamed prop, resets current page
-  // Removed exportQuality, cmykMode from destructuring
+  exportQuality,
+  cmykMode,
   // Page props
   currentPageIndex,
   pageCount,
@@ -56,14 +60,16 @@ export function IntegratedCardEditor({
   addPage,
   deletePage,
   allPages, // Receive all pages data
-  // Removed exportScope, setExportScope from destructuring
+  // Export scope props
+  exportScope,
+  setExportScope,
 }: IntegratedCardEditorProps) {
   const { t } = useTranslation(); // Initialize useTranslation
   const isMobile = useMobileDetect();
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
-  // Removed isExporting state
+  const [isExporting, setIsExporting] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  // Removed isPrinting state
+  const [isPrinting, setIsPrinting] = useState(false); // Add printing state
 
   // Refs
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -437,7 +443,194 @@ export function IntegratedCardEditor({
     }
   }, [containerWidth, renderCanvas]); // renderCanvas depends on 'cards' prop now
 
-  // Removed getDpiForQuality, handleExportPDF, handleExportPNG, handlePrint, downloadFile functions
+  // Get DPI for export based on quality prop
+  const getDpiForQuality = useCallback(() => {
+    switch (exportQuality) {
+      case "standard": return 300;
+      case "high": return 450;
+      case "ultra": return 600;
+      default: return 300;
+    }
+  }, [exportQuality]);
+
+   // --- Export Handlers ---
+   const handleExportPDF = async () => {
+     if (containerWidth <= 0) {
+         toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
+         return;
+     }
+     setIsExporting(true);
+     try {
+       const pagesToExport = exportScope === 'all' ? allPages : [cards]; // Use allPages or current page's cards
+       const exportDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
+       const exportDpi = getDpiForQuality();
+
+       if (exportScope === 'all') {
+         toast({ title: t("toast.exportingAllTitle"), description: t("toast.exportingAllDescPdf") });
+       } else if (exportQuality === "ultra") {
+          toast({ title: "高品質出力処理中", description: "高解像度PDFの生成には時間がかかる場合があります。" });
+       }
+
+       const options: PdfExportOptions = { // Use PdfExportOptions type
+         pages: pagesToExport,
+         spacing, cardType, cmykConversion, cmykMode,
+         dpi: exportDpi,
+         dimensions: exportDimensions,
+       };
+       const pdfBlob = await generatePDF(options);
+       downloadFile(pdfBlob, `tcg-proxy-cards-${exportScope}-${exportDpi}dpi.pdf`);
+       toast({ title: t("toast.pdfSuccess"), description: t("toast.pdfSuccessDesc") });
+     } catch (error) {
+      console.error("PDF export failed:", error);
+      toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+   }
+
+   const handleExportPNG = async () => {
+      const currentCanvas = canvasRef.current;
+      if (!currentCanvas || containerWidth <= 0) {
+         toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
+         return;
+      }
+      if (exportScope === 'all') {
+        toast({ title: t("toast.notImplementedTitle"), description: t("toast.notImplementedDescAllPages"), variant: "default" });
+        return;
+      }
+
+      setIsExporting(true);
+      try {
+        if (exportQuality === "ultra") {
+           toast({ title: "高品質出力処理中", description: "高解像度PNGの生成には時間がかかる場合があります。" });
+         }
+         // Filter out null cards from the CURRENT page ('cards' prop)
+         const validCards = cards.filter((card): card is CardData => card !== null);
+         const exportDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
+         const exportDpi = getDpiForQuality();
+
+         const options: PngExportOptions = { // Use PngExportOptions type
+           cards: validCards, // Pass only valid cards from the current page
+           spacing, cardType, cmykConversion, cmykMode,
+           dpi: exportDpi,
+           canvas: currentCanvas, // Pass preview canvas for fallback
+           dimensions: exportDimensions,
+         };
+        const pngBlob = await generatePNG(options);
+        downloadFile(pngBlob, `tcg-proxy-cards-page${currentPageIndex + 1}-${exportDpi}dpi.png`);
+        toast({ title: t("toast.pngSuccess"), description: t("toast.pngSuccessDesc") });
+      } catch (error) {
+        console.error("PNG export failed:", error);
+        toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
+      } finally {
+        setIsExporting(false);
+      }
+   }
+   // --- End Export Handlers ---
+
+   // --- Print Handler ---
+   const handlePrint = async () => {
+     if (isPrinting || isExporting || containerWidth <= 0) {
+       toast({ title: "印刷不可", description: "現在他の処理を実行中か、プレビューの準備ができていません。", variant: "destructive" });
+       return;
+     }
+     setIsPrinting(true);
+     toast({ title: "印刷準備中", description: "高品質な印刷用データを生成しています..." });
+
+     let printFrame: HTMLIFrameElement | null = null;
+     let pdfUrl: string | null = null;
+
+     try {
+       const pagesToPrint = exportScope === 'all' ? allPages : [cards];
+       const printDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
+       const printDpi = getDpiForQuality(); // Use export quality for printing
+
+       const options: PdfExportOptions = {
+         pages: pagesToPrint,
+         spacing, cardType, cmykConversion, cmykMode,
+         dpi: printDpi,
+         dimensions: printDimensions,
+       };
+
+       const pdfBlob = await generatePDF(options);
+       pdfUrl = URL.createObjectURL(pdfBlob);
+
+       printFrame = document.createElement('iframe');
+       printFrame.style.position = 'absolute';
+       printFrame.style.width = '0';
+       printFrame.style.height = '0';
+       printFrame.style.border = '0';
+       printFrame.style.visibility = 'hidden';
+       printFrame.src = pdfUrl;
+
+       const handleLoad = () => {
+         try {
+           if (printFrame?.contentWindow) {
+             printFrame.contentWindow.focus(); // Required for some browsers
+             printFrame.contentWindow.print();
+             // Cleanup is tricky because print dialog is modal.
+             // Removing automatic cleanup to prevent dialog from closing prematurely.
+             // Resource leak might occur, but browser should handle on tab close.
+             // setTimeout(() => { // Remove or comment out setTimeout
+               // if (printFrame) {
+               //   document.body.removeChild(printFrame); // Comment out cleanup
+               //   printFrame = null;
+               // }
+               // if (pdfUrl) {
+               //   URL.revokeObjectURL(pdfUrl); // Comment out cleanup
+               //   pdfUrl = null;
+               // }
+               setIsPrinting(false); // Keep resetting state
+               toast({ title: "印刷準備完了", description: "印刷ダイアログが表示されました。" }); // Keep toast
+             // }, 2000); // Remove or comment out setTimeout
+           } else {
+             throw new Error("印刷フレームのコンテンツが見つかりません。");
+           }
+         } catch (printError) {
+           console.error("Printing failed:", printError);
+           toast({ title: "印刷エラー", description: `印刷の実行に失敗しました: ${printError instanceof Error ? printError.message : t("toast.unknownError")}`, variant: "destructive" });
+           // Cleanup on error
+           if (printFrame) document.body.removeChild(printFrame);
+           if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+           setIsPrinting(false);
+         }
+       };
+
+       const handleError = () => {
+         console.error("Failed to load PDF in iframe.");
+         toast({ title: "印刷準備エラー", description: "印刷用PDFの読み込みに失敗しました。", variant: "destructive" });
+         if (printFrame) document.body.removeChild(printFrame);
+         if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+         setIsPrinting(false);
+       };
+
+       printFrame.addEventListener('load', handleLoad);
+       printFrame.addEventListener('error', handleError);
+
+       document.body.appendChild(printFrame);
+
+     } catch (error) {
+       console.error("PDF generation for printing failed:", error);
+       toast({ title: "印刷準備エラー", description: `印刷用PDFの生成に失敗しました: ${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
+       // Ensure cleanup even if PDF generation fails
+       if (printFrame && printFrame.parentNode) document.body.removeChild(printFrame);
+       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+       setIsPrinting(false);
+     }
+   };
+   // --- End Print Handler ---
+
+  // File download helper
+  const downloadFile = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   // Calculate pixel values for styles (memoized)
   const overlayStyles = useMemo(() => {
@@ -482,7 +675,7 @@ export function IntegratedCardEditor({
                   <TooltipTrigger asChild>
                      <Button
                        onClick={onResetCards} // Use prop
-                       className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-gray-900 dark:text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 sm:flex-none" // Removed sm:w-28
+                       className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-gray-900 dark:text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 flex-1 sm:flex-none sm:w-28"
                      >
                        <RotateCcw className="h-4 w-4" />
                       <span>{t("action.resetAll")}</span> {/* Text updated in i18n to "Reset Page" */}
@@ -628,9 +821,10 @@ export function IntegratedCardEditor({
                  ref={uploadInputRef} type="file" accept="image/*" multiple className="hidden"
                  onChange={handleUploadFileChange}
                />
-               {/* Upload Area */}
-               <div
-                 onClick={handleUploadButtonClick}
+               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                {/* Upload Area */}
+                <div
+                  onClick={handleUploadButtonClick}
                   className={cn(
                     "flex flex-col items-center justify-center w-full sm:w-auto sm:flex-1 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
                     isProcessingImage ? "opacity-50 cursor-not-allowed" : ""
@@ -641,13 +835,45 @@ export function IntegratedCardEditor({
                   <span className="text-sm text-gray-500 dark:text-gray-400 text-center">
                     {selectedCardIndices.length > 1
                       ? `${t("action.clickOrDropToUpload")} (${selectedCardIndices.length} スロット選択中)`
-                       : t("action.clickOrDropToUpload")}
+                      : t("action.clickOrDropToUpload")}
                   </span>
-               </div>
+                 </div>
 
-               {/* Removed Export/Print Controls Section */}
-             </div>
-           </CardContent>
+                 {/* Export Scope Toggle & Export Buttons */}
+                 <div className="flex flex-col sm:flex-row items-center justify-end gap-2 w-full sm:w-auto">
+                   {/* Export Scope Toggle - Uses exportScope and setExportScope props */}
+                   <ToggleGroup
+                     type="single" value={exportScope} // Use prop
+                     onValueChange={(value) => { if (value === 'current' || value === 'all') { setExportScope(value); } }} // Use prop
+                     className="border border-gold-500 rounded-md overflow-hidden h-10"
+                     aria-label="Export Scope"
+                   >
+                     <ToggleGroupItem value="current" aria-label="Export current page" className="data-[state=on]:bg-gold-500 data-[state=on]:text-black px-3 text-xs sm:text-sm h-full">
+                       {t("export.scope.current")}
+                     </ToggleGroupItem>
+                     <ToggleGroupItem value="all" aria-label="Export all pages" className="data-[state=on]:bg-gold-500 data-[state=on]:text-black px-3 text-xs sm:text-sm h-full">
+                       {t("export.scope.all")}
+                     </ToggleGroupItem>
+                   </ToggleGroup>
+
+                   {/* Existing Export Buttons */}
+                   <div className="flex space-x-2 justify-end w-full sm:w-auto">
+                     <Button variant="outline" onClick={handlePrint} disabled={isPrinting || isExporting || containerWidth <= 0} className="border-gold-500 flex-1 sm:flex-none sm:w-28">
+                       <Printer className="mr-2 h-4 w-4" /> {t("action.print")}
+                     </Button>
+                     {exportScope === 'current' && (
+                       <Button onClick={handleExportPNG} disabled={isExporting || containerWidth <= 0} className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28">
+                         <Download className="mr-2 h-4 w-4" /> PNG
+                       </Button>
+                     )}
+                     <Button onClick={handleExportPDF} disabled={isExporting || containerWidth <= 0} className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28">
+                       <Download className="mr-2 h-4 w-4" /> PDF
+                     </Button>
+                   </div>
+                 </div>
+               </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </div>

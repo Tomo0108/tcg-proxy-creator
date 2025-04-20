@@ -45,7 +45,7 @@ export default function CreatePage() {
   const { toast } = useToast(); // Correct usage with the imported hook
 
   // --- Settings State ---
-  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("yugioh") // Default to yugioh
+  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("pokemon")
   const [spacing, setSpacing] = useState(5)
   const [cmykConversion, setCmykConversion] = useState(false)
   const [cmykMode, setCmykMode] = useState<"simple" | "accurate">("simple")
@@ -211,7 +211,7 @@ export default function CreatePage() {
          // Note: PNG generation in page.tsx doesn't have direct canvas access.
          // The pdf-generator might need adjustment or a different approach for high-quality PNG without canvas.
          // For now, we pass null or handle it within generatePNG.
-         // canvas: null, // Pass null as canvas is not directly available here - Type error, pdf-generator needs update if canvas is required
+         canvas: null, // Pass null as canvas is not directly available here
          dimensions: exportDimensions,
        };
        const pngBlob = await generatePNG(options);
@@ -370,120 +370,58 @@ export default function CreatePage() {
                        </Select>
                      </div>
                    )}
-                   {/* --- Settings Summary (Moved Inside) --- */}
-                   <hr className="my-4 border-gold-500/50" /> {/* Separator line */}
-                   <div className="text-sm text-muted-foreground space-y-1"> {/* Added space-y-1 */}
-                     <p>• {t("layout.info.cardType")}: {cardType === "pokemon" ? t("card.pokemon") : t("card.yugioh")}</p>
-                     <p>• {t("layout.info.spacing")}: {spacing}mm</p>
-                     <p>• {t("layout.info.cmyk")}: {cmykConversion ? t("enabled") : t("disabled")}</p>
-                     <p>• {t("settings.quality")}: {t(`quality.${exportQuality}`)} {/* 品質表示を追加 */}</p>
-                     {/* CMYKモードのサマリー表示を追加 */}
-                     {cmykConversion && (
-                       <p>• {t("settings.cmykMode")}: {t(`cmykMode.${cmykMode}`)}</p>
-                     )}
-                   </div>
-                   {/* --- End Settings Summary --- */}
-                 </div> {/* This closes the inner space-y-4 div */}
-               </CardContent>
-             </Card>
-             {/* Export/Print Controls removed from here */}
-           </div>
-
-           {/* Integrated Card Editor - Right Side */}
-           <div className="lg:col-span-3">
-             <IntegratedCardEditor
-               cardType={cardType}
-               spacing={spacing}
-               cmykConversion={cmykConversion}
-               // Pass the cards for the current page
-               cards={pages[currentPageIndex] || []} // Ensure fallback to empty array
-               onCardUpdate={handleCardUpdate}
-               onCardRemove={handleCardRemove}
-               // Pass the reset function for the current page
-               onResetCards={handleResetCurrentPage} // Rename prop for clarity? Or keep as is? Let's keep for now.
-               // Removed exportQuality, cmykMode, allPages, exportScope, setExportScope props
-               // Pass page-related props
-               currentPageIndex={currentPageIndex}
-               pageCount={pages.length}
-               setCurrentPageIndex={setCurrentPageIndex}
-               addPage={addPage}
-               deletePage={deletePage}
-               // Pass all pages for potential multi-page export (if needed later) - Re-added for context, but IntegratedCardEditor won't use it directly for export buttons
-               allPages={pages}
-             />
-
-             {/* --- Export/Print Controls (Moved Here) --- */}
-             <Card className="border-gold-500 mt-6"> {/* Added gold border and margin */}
-               <CardContent className="p-6">
-                 <h2 className="text-xl font-semibold mb-4">{t("create.export.title")}</h2> {/* Corrected key */}
-                 <div className="space-y-4">
-                   {/* Export Scope Toggle Group */}
-                   <div>
-                     {/* Removed Label for export scope */}
-                     <ToggleGroup
-                       id="export-scope"
-                       type="single"
-                       value={exportScope}
-                       onValueChange={(value) => { if (value) setExportScope(value as 'current' | 'all'); }}
-                       className="grid grid-cols-2" // Removed gap-2 to make items touch
-                       disabled={isExporting || isPrinting}
-                     >
-                       {/* Apply specific styles for better visibility and connected look */}
-                       <ToggleGroupItem
-                         value="current"
-                         aria-label={t("export.scope.current")}
-                         className="rounded-r-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0" // Added border, adjusted styles, and focus ring
-                       >
-                         {t("export.scope.current")}
-                       </ToggleGroupItem>
-                       <ToggleGroupItem
-                         value="all"
-                         aria-label={t("export.scope.all")}
-                         className="rounded-l-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground border border-l-0 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0" // Added border (no left border), adjusted styles, and focus ring
-                       >
-                         {t("export.scope.all")}
-                       </ToggleGroupItem>
-                     </ToggleGroup>
-                   </div>
-
-                   {/* Export Buttons */}
-                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4"> {/* Added margin top */}
-                     <Button
-                       onClick={handleExportPDF}
-                       disabled={isExporting || isPrinting}
-                       className="w-full border-gold-500" // Added gold border
-                     >
-                       <Download className="mr-2 h-4 w-4" /> PDF
-                     </Button>
-                     <Button
-                       onClick={handleExportPNG}
-                       disabled={isExporting || isPrinting || exportScope === 'all'} // Disable PNG for 'all' scope for now
-                       className="w-full border-gold-500" // Added gold border
-                     >
-                       <Download className="mr-2 h-4 w-4" /> PNG
-                     </Button>
-                     <Button
-                       onClick={handlePrint}
-                       disabled={isExporting || isPrinting}
-                       className="w-full border-gold-500" // Added gold border
-                     >
-                       <Printer className="mr-2 h-4 w-4" /> {t("action.print")}
-                     </Button>
-                   </div>
-                   {(isExporting || isPrinting) && (
-                     <p className="text-sm text-muted-foreground text-center animate-pulse">
-                       {isPrinting ? t("status.printing") : t("status.exporting")}...
-                     </p>
-                   )}
                  </div>
                </CardContent>
              </Card>
-             {/* --- End Export/Print Controls --- */}
 
-           </div>
-         </div>
-       </div>
-       <Toaster />
-     </div>
-   )
- }
+            <div className="text-sm text-muted-foreground">
+              <p>
+                • {t("layout.info.cardType")}: {cardType === "pokemon" ? t("card.pokemon") : t("card.yugioh")}
+              </p>
+              <p>
+                • {t("layout.info.spacing")}: {spacing}mm
+              </p>
+              <p>
+                • {t("layout.info.cmyk")}: {cmykConversion ? t("enabled") : t("disabled")}
+              </p>
+               <p>
+                 • {t("settings.quality")}: {t(`quality.${exportQuality}`)} {/* 品質表示を追加 */}
+               </p>
+               {/* CMYKモードのサマリー表示を追加 */}
+               {cmykConversion && (
+                 <p>
+                   • {t("settings.cmykMode")}: {t(`cmykMode.${cmykMode}`)}
+                 </p>
+               )}
+             </div>
+          </div>
+
+          {/* Integrated Card Editor - Right Side */}
+          <div className="lg:col-span-3">
+            <IntegratedCardEditor
+              cardType={cardType}
+              spacing={spacing}
+              cmykConversion={cmykConversion}
+              // Pass the cards for the current page
+              cards={pages[currentPageIndex] || []} // Ensure fallback to empty array
+              onCardUpdate={handleCardUpdate}
+              onCardRemove={handleCardRemove}
+              // Pass the reset function for the current page
+              onResetCards={handleResetCurrentPage} // Rename prop for clarity? Or keep as is? Let's keep for now.
+              // Removed exportQuality, cmykMode, allPages, exportScope, setExportScope props
+              // Pass page-related props
+              currentPageIndex={currentPageIndex}
+              pageCount={pages.length}
+              setCurrentPageIndex={setCurrentPageIndex}
+              addPage={addPage}
+              deletePage={deletePage}
+               // Pass all pages for potential multi-page export (if needed later) - Re-added for context, but IntegratedCardEditor won't use it directly for export buttons
+               allPages={pages}
+               />
+            </div>
+          </div>
+      </div>
+      <Toaster />
+    </div>
+  )
+}

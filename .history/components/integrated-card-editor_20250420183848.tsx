@@ -15,14 +15,14 @@ import { useMobileDetect } from "@/hooks/use-mobile"
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
  import { cn } from "@/lib/utils"
  import { Plus, FileText } from "lucide-react" // Keep Plus, FileText if used
- // Removed ToggleGroup, ToggleGroupItem imports
+ // Removed ToggleGroup import
  import { useTranslation } from "@/lib/i18n"; // Import useTranslation
 
 // Interface for props passed to this component
 interface IntegratedCardEditorProps {
   cardType: string;
   spacing: number;
-  cmykConversion: boolean; // Keep cmykConversion prop for now, might be needed by parent
+  cmykConversion: boolean;
   cards: (CardData | null)[]; // Cards for the CURRENT page
   onCardUpdate: (card: CardData, index: number) => void; // Update card on the CURRENT page
   onCardRemove: (index: number) => void; // Remove card from the CURRENT page
@@ -43,7 +43,7 @@ const LONG_PRESS_DURATION = 500; // Long press duration in ms
 export function IntegratedCardEditor({
   cardType,
   spacing,
-  cmykConversion, // Keep cmykConversion prop for now
+  cmykConversion,
   cards, // Represents cards for the currentPageIndex
   onCardUpdate,
   onCardRemove,
@@ -61,9 +61,8 @@ export function IntegratedCardEditor({
   const { t } = useTranslation(); // Initialize useTranslation
   const isMobile = useMobileDetect();
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
-  // Removed isExporting state
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  // Removed isPrinting state
+  // Removed isExporting, isPrinting state
 
   // Refs
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);

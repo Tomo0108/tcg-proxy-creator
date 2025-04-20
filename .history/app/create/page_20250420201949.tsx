@@ -45,7 +45,7 @@ export default function CreatePage() {
   const { toast } = useToast(); // Correct usage with the imported hook
 
   // --- Settings State ---
-  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("yugioh") // Default to yugioh
+  const [cardType, setCardType] = useState<keyof typeof cardDimensions>("pokemon")
   const [spacing, setSpacing] = useState(5)
   const [cmykConversion, setCmykConversion] = useState(false)
   const [cmykMode, setCmykMode] = useState<"simple" | "accurate">("simple")
@@ -419,7 +419,7 @@ export default function CreatePage() {
                  <div className="space-y-4">
                    {/* Export Scope Toggle Group */}
                    <div>
-                     {/* Removed Label for export scope */}
+                     <Label htmlFor="export-scope" className="mb-1 block">{t("export.scope")}</Label>
                      <ToggleGroup
                        id="export-scope"
                        type="single"

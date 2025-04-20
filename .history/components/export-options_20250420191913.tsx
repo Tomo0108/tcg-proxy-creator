@@ -36,19 +36,6 @@ export function ExportOptions({ cmykEnabled }: ExportOptionsProps) {
   // Placeholder dimensions - these should be calculated based on cardType, etc.
   const dimensions: Dimensions = {
     a4Width: 210, a4Height: 297, cardWidth: 63, cardHeight: 88,
-    marginX: 10, marginY: 10, cardsPerRow: 3, cardsPerColumn: 3
-  }; // Placeholder
-
-  // Get DPI based on quality setting
-  const getDpiForQuality = () => {
-    switch (exportQuality) {
-      case "standard":
-        return 300
-      case "high":
-        return 450
-      case "ultra":
-        return 600
-      default:
         return 350
     }
   }
@@ -78,40 +65,28 @@ export function ExportOptions({ cmykEnabled }: ExportOptionsProps) {
         })
       }
 
-      // Prepare options based on format
-      const dpi = getDpiForQuality();
-      let blob;
+      // Export options
+      const options = {
+        cards: [], // This would be populated with actual card data
+        spacing: 5,
+        cardType: "pokemon",
+        cmykConversion: cmykEnabled,
+        dpi: getDpiForQuality(),
+        canvas: printLayoutCanvas,
+      }
+
+      let blob
 
       if (exportFormat === "pdf") {
-        const pdfOptions: PdfExportOptions = {
-          pages: pages, // Use placeholder pages array
-          spacing: spacing, // Use placeholder spacing
-          cardType: cardType, // Use placeholder cardType
-          cmykConversion: cmykEnabled,
-          dpi: dpi,
-          dimensions: dimensions, // Use placeholder dimensions
-          cmykMode: cmykMode, // Use placeholder cmykMode
-        };
-        blob = await generatePDF(pdfOptions);
-        downloadFile(blob, "tcg-proxy-cards.pdf");
+        blob = await generatePDF(options)
+        downloadFile(blob, "tcg-proxy-cards.pdf")
         toast({
           title: t("toast.pdfSuccess"),
           description: t("toast.pdfSuccessDesc"),
-        });
+        })
       } else {
-        const currentCards = pages[currentPageIndex]?.filter((card): card is CardData => card !== null) || []; // Get cards for the current page
-        const pngOptions: PngExportOptions = {
-          cards: currentCards, // Use cards from the current page
-          spacing: spacing, // Use placeholder spacing
-          cardType: cardType, // Use placeholder cardType
-          cmykConversion: cmykEnabled,
-          dpi: dpi,
-          dimensions: dimensions, // Use placeholder dimensions
-          cmykMode: cmykMode, // Use placeholder cmykMode
-          canvas: printLayoutCanvas, // Pass the canvas for potential fallback
-        };
-        blob = await generatePNG(pngOptions);
-        downloadFile(blob, "tcg-proxy-cards.png");
+        blob = await generatePNG(options)
+        downloadFile(blob, "tcg-proxy-cards.png")
         toast({
           title: t("toast.pngSuccess"),
           description: t("toast.pngSuccessDesc"),

@@ -386,17 +386,13 @@ const translations: Translations = {
       ja: "超高品質 (600 DPI)",
     },
     // Export Scope (Existing + Added)
-    "export.scope": { // Added label key
-      en: "Export Scope",
-      ja: "出力範囲",
-    },
     "export.scope.current": {
       en: "Current Page",
-      ja: "現在のページ", // Already exists, ensure it's correct
+      ja: "現在のページ",
     },
     "export.scope.all": {
       en: "All Pages",
-      ja: "全てのページ", // Already exists, ensure it's correct
+      ja: "全ページ",
     },
     // Not Implemented Toast (Existing + Updated message)
     "toast.notImplementedTitle": {
@@ -463,12 +459,14 @@ if (typeof window !== 'undefined') {
 
    // Modify t function to accept replacements
    const t = (key: string, replacements?: Record<string, string | number>): string => {
+     console.log(`[t] Called with key: ${key}, locale: ${locale}`); // DEBUG LOG
      let translation = key; // Default to key if not found
      // Use hasOwnProperty for a more robust check
      if (Object.prototype.hasOwnProperty.call(translations, key)) {
        translation = translations[key][locale];
+       console.log(`[t] Found translation: ${translation}`); // DEBUG LOG
      } else {
-       console.warn(`Translation missing for key: ${key}`);
+       console.warn(`[t] Translation missing for key: ${key}`); // DEBUG LOG
        // Try splitting the key and looking up parts (basic fallback)
        const parts = key.split('.');
        if (parts.length > 1) {
@@ -477,6 +475,7 @@ if (typeof window !== 'undefined') {
          if (lastPart) {
             // Simple fallback: return the last part of the key capitalized
             translation = lastPart.charAt(0).toUpperCase() + lastPart.slice(1);
+            console.log(`[t] Using fallback: ${translation}`); // DEBUG LOG
          }
        }
      }
