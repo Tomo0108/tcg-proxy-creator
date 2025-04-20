@@ -18,7 +18,7 @@ const translations: Translations = {
   },
   "app.description": {
     en: "Create high-quality proxy cards for trading card games",
-    ja: "トレーディングカードゲーム用の高品質なプロキシカードを作成",
+    ja: "トレーディングカードゲーム用の高品質プロキシカードを作成",
   },
   "nav.create": {
     en: "Create",

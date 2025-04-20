@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-// Removed Image import
+import Image from "next/image"; // next/image をインポート
 import { ArrowRight, ImageIcon, Printer, Save } from "lucide-react";
 import { Header } from "@/components/header";
 import { useTranslation } from "@/lib/i18n";
@@ -20,26 +20,28 @@ export default function Home() {
       {/* Removed relative z-10 from main */}
       <main className="flex-1">
         {/* Add relative and overflow-hidden to contain the absolute positioned canvas */}
-        {/* Force dark background for hero section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 relative overflow-hidden bg-black"> {/* Added bg-black */}
+        <section className="w-full py-12 md:py-24 lg:py-32 relative overflow-hidden">
           {/* Place Canvas inside the section */}
           <FallingCardsCanvas />
-          {/* Container z-index reset to default */}
-          <div className="container px-4 md:px-6 relative z-10"> {/* Changed z-20 back to z-10 */}
-             {/* Removed Image component */}
-            {/* Text container z-index removed */}
-            <div className="flex flex-col items-center justify-center space-y-4 text-center relative"> {/* Removed z-10 */}
-              {/* Removed relative from inner div */}
-              <div className="space-y-2">
-                {/* Force white text for title */}
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-gray-50">{t("home.hero.title")}</h2> {/* Changed to text-gray-50 */}
-                {/* Force lighter gray text for description */}
-                <p className="mx-auto max-w-[700px] text-gray-300 md:text-xl">{t("home.hero.description")}</p> {/* Changed text-gray-400 to text-gray-300 */}
+          {/* Add relative z-10 to ensure content is above the canvas */}
+          <div className="container px-4 md:px-6 relative z-10">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              {/* relative を追加 */}
+              <div className="space-y-2 relative">
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">{t("home.hero.title")}</h2>
+                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">{t("home.hero.description")}</p>
+                {/* 画像を追加 */}
+                <Image
+                  src="/img/penki_gold.png"
+                  alt="Gold paint splatter"
+                  fill // 親要素いっぱいに広げる
+                  className="object-contain pointer-events-none" // アスペクト比を維持し、クリックイベントを無効化
+                  priority // LCP要素の可能性があるので優先的に読み込む
+                />
               </div>
               <div className="space-x-4">
                 <Link href="/create">
-                  {/* Add text-black for light mode, dark:text-white for dark mode */}
-                  <Button className="px-8 bg-gold-500 hover:bg-gold-600 text-black dark:text-white">
+                  <Button className="px-8 bg-gold-500 hover:bg-gold-600">
                     {t("home.getStarted")} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>

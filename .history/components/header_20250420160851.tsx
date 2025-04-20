@@ -106,21 +106,13 @@ export function Header() {
                   {isMounted && theme === 'light' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
                   <Sun className="h-[1.2rem] w-[1.2rem]" />
                 </Button>
-                <Button
-               variant="ghost" // 常に ghost に変更
-               size="icon"
-               onClick={() => setTheme('dark')}
-               aria-label="Set dark theme"
-                  className={cn(
-                    "flex items-center gap-1.5 text-foreground", // Use flex, gap
-                    theme === 'dark' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
-                  )}
-                >
-                  {/* isMounted チェックを追加 */}
-                  {isMounted && theme === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
-                  <Moon className="h-[1.2rem] w-[1.2rem]" />
-                </Button>
-               <LanguageSwitcher />
+                 theme === 'dark' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
+               )}
+             >
+               {theme === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
+               <Moon className="h-[1.2rem] w-[1.2rem]" />
+             </Button>
+            <LanguageSwitcher />
           </div>
         </div>
 
@@ -174,30 +166,28 @@ export function Header() {
                          size="icon"
                          onClick={() => { setTheme('light'); setIsMenuOpen(false); }} // メニューも閉じる
                          aria-label="Set light theme"
-                          className={cn(
-                            "flex items-center gap-1.5 text-foreground", // Use flex, gap
-                            theme === 'light' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
-                          )}
-                        >
-                          {/* isMounted チェックを追加 */}
-                          {isMounted && theme === 'light' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
-                          <Sun className="h-[1.2rem] w-[1.2rem]" />
-                        </Button>
-                        <Button
+                         className={cn(
+                           "flex items-center gap-1.5 text-foreground", // Use flex, gap
+                           theme === 'light' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
+                         )}
+                       >
+                         {theme === 'light' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
+                         <Sun className="h-[1.2rem] w-[1.2rem]" />
+                       </Button>
+                       <Button
                          variant="ghost" // 常に ghost に変更
                          size="icon"
                          onClick={() => { setTheme('dark'); setIsMenuOpen(false); }} // メニューも閉じる
                          aria-label="Set dark theme"
-                          className={cn(
-                            "flex items-center gap-1.5 text-foreground", // Use flex, gap
-                            theme === 'dark' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
-                          )}
-                        >
-                          {/* isMounted チェックを追加 */}
-                          {isMounted && theme === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
-                          <Moon className="h-[1.2rem] w-[1.2rem]" />
-                        </Button>
-                      </div>
+                         className={cn(
+                           "flex items-center gap-1.5 text-foreground", // Use flex, gap
+                           theme === 'dark' ? 'opacity-100' : 'opacity-60 hover:opacity-100'
+                         )}
+                       >
+                         {theme === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
+                         <Moon className="h-[1.2rem] w-[1.2rem]" />
+                       </Button>
+                     </div>
                    </div>
                    <div className="flex items-center justify-between">
                      <span className="text-sm font-medium">Language</span>

@@ -14,11 +14,11 @@ type Translations = {
 const translations: Translations = {
   "app.title": {
     en: "TCG Proxy Creator",
-    ja: "TCG Proxy Creator",
+    ja: "TCGプロキシクリエーター",
   },
   "app.description": {
     en: "Create high-quality proxy cards for trading card games",
-    ja: "トレーディングカードゲーム用の高品質なプロキシカードを作成",
+    ja: "トレーディングカードゲーム用の高品質プロキシカードを作成",
   },
   "nav.create": {
     en: "Create",
@@ -110,7 +110,7 @@ const translations: Translations = {
   },
   "footer.copyright": {
     en: "© 2025 TCG Proxy Creator. All rights reserved.",
-    ja: "© 2025 TCG Proxy Creator. All rights reserved.",
+    ja: "© 2025 TCGプロキシクリエーター. All rights reserved.",
   },
   "footer.terms": {
     en: "Terms",
@@ -122,11 +122,11 @@ const translations: Translations = {
   },
   "create.title": {
     en: "Create Proxy Cards",
-    ja: "プロキシカードの作成",
+    ja: "プロキシカード作成",
   },
   "create.settings.title": {
-    en: "Settings",
-    ja: "設定",
+    en: "Card Settings",
+    ja: "カード設定",
   },
   "create.export.title": {
     en: "Export Options",
@@ -160,6 +160,14 @@ const translations: Translations = {
     en: "Image Scale",
     ja: "画像スケール",
   },
+  "editor.positionX": {
+    en: "Position X",
+    ja: "X位置",
+  },
+  "editor.positionY": {
+    en: "Position Y",
+    ja: "Y位置",
+  },
   "editor.saveToCard": {
     en: "Save to Card",
     ja: "カードに保存",
@@ -169,8 +177,8 @@ const translations: Translations = {
     ja: "画像がアップロードされていません",
   },
   "layout.preview": {
-    en: "Preview",
-    ja: "プレビュー",
+    en: "A4 Print Layout Preview",
+    ja: "A4プリントレイアウトプレビュー",
   },
   "layout.emptyCard": {
     en: "Empty Card",
@@ -289,12 +297,12 @@ const translations: Translations = {
      ja: "CMYK変換モード",
    },
    "cmykMode.simple": { // New key for simple mode
-     en: "Simple",
-     ja: "シミュレーション",
+     en: "Simple (Simulation)",
+     ja: "シンプル (シミュレーション)",
    },
    "cmykMode.accurate": { // New key for accurate mode
-     en: "Accurate",
-     ja: "高精度",
+     en: "Accurate (Experimental)",
+     ja: "高精度 (実験的)",
    },
    // Remove unused keys: action.uploadImage, action.uploadToSelected
  }

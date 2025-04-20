@@ -14,11 +14,11 @@ type Translations = {
 const translations: Translations = {
   "app.title": {
     en: "TCG Proxy Creator",
-    ja: "TCG Proxy Creator",
+    ja: "TCGプロキシクリエーター",
   },
   "app.description": {
     en: "Create high-quality proxy cards for trading card games",
-    ja: "トレーディングカードゲーム用の高品質なプロキシカードを作成",
+    ja: "トレーディングカードゲーム用の高品質プロキシカードを作成",
   },
   "nav.create": {
     en: "Create",
@@ -289,11 +289,11 @@ const translations: Translations = {
      ja: "CMYK変換モード",
    },
    "cmykMode.simple": { // New key for simple mode
-     en: "Simple",
-     ja: "シミュレーション",
+     en: "Simple (Simulation)",
+     ja: "シミュレーション)",
    },
    "cmykMode.accurate": { // New key for accurate mode
-     en: "Accurate",
+     en: "Accurate (Experimental)",
      ja: "高精度",
    },
    // Remove unused keys: action.uploadImage, action.uploadToSelected

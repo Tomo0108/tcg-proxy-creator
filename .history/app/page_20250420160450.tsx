@@ -38,8 +38,7 @@ export default function Home() {
               </div>
               <div className="space-x-4">
                 <Link href="/create">
-                  {/* Add text-black for light mode, dark:text-white for dark mode */}
-                  <Button className="px-8 bg-gold-500 hover:bg-gold-600 text-black dark:text-white">
+                  <Button className="px-8 bg-gold-500 hover:bg-gold-600">
                     {t("home.getStarted")} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>

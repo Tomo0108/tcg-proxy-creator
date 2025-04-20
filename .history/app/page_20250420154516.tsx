@@ -33,13 +33,12 @@ export default function Home() {
               <div className="space-y-2">
                 {/* Force white text for title */}
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-gray-50">{t("home.hero.title")}</h2> {/* Changed to text-gray-50 */}
-                {/* Force lighter gray text for description */}
-                <p className="mx-auto max-w-[700px] text-gray-300 md:text-xl">{t("home.hero.description")}</p> {/* Changed text-gray-400 to text-gray-300 */}
+                {/* Force light gray text for description */}
+                <p className="mx-auto max-w-[700px] text-gray-400 md:text-xl">{t("home.hero.description")}</p> {/* Changed text-muted-foreground to text-gray-400 */}
               </div>
               <div className="space-x-4">
                 <Link href="/create">
-                  {/* Add text-black for light mode, dark:text-white for dark mode */}
-                  <Button className="px-8 bg-gold-500 hover:bg-gold-600 text-black dark:text-white">
+                  <Button className="px-8 bg-gold-500 hover:bg-gold-600">
                     {t("home.getStarted")} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>

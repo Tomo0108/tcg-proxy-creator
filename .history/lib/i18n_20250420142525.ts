@@ -14,11 +14,11 @@ type Translations = {
 const translations: Translations = {
   "app.title": {
     en: "TCG Proxy Creator",
-    ja: "TCG Proxy Creator",
+    ja: "TCGプロキシクリエーター",
   },
   "app.description": {
     en: "Create high-quality proxy cards for trading card games",
-    ja: "トレーディングカードゲーム用の高品質なプロキシカードを作成",
+    ja: "トレーディングカードゲーム用の高品質プロキシカードを作成",
   },
   "nav.create": {
     en: "Create",
@@ -73,44 +73,44 @@ const translations: Translations = {
     ja: "保存",
   },
   "home.hero.title": {
-    en: "TCG Proxy Creator",
-    ja: "TCG Proxy Creator",
+    en: "Create High-Quality TCG Proxy Cards",
+    ja: "高品質なTCGプロキシカードを作成",
   },
   "home.hero.description": {
-    en: "Create high quality data for printing TCG proxy cards",
-    ja: "TCGのプロキシカードを印刷するための高品質なデータを作成",
+    en: "Create data for printing proxy cards for Pokemon, Yu-Gi-Oh!,",
+    ja: "ポケモン、遊戯王などのプロキシカードを印刷するためのデータを作成します。",
   },
   "home.getStarted": {
-    en: "START",
+    en: "Get Started",
     ja: "はじめる",
   },
   "home.feature1.title": {
-    en: "High resolution up to 600 DPI",
-    ja: "最大600DPIの高解像度",
+    en: "High-Resolution Cards",
+    ja: "高解像度カード",
   },
   "home.feature1.description": {
-    en: "Create and save cards in ultra-high resolution for beautiful print quality.",
-    ja: "美しい印刷品質を得るために、超高解像度でカードを作成・保存します。",
+    en: "Create and save cards at 350 DPI with CMYK color conversion for optimal print quality.",
+    ja: "最適な印刷品質のために、CMYKカラー変換を使用して350 DPIでカードを作成・保存します。",
   },
   "home.feature2.title": {
     en: "A4 Print Layout",
     ja: "A4印刷レイアウト",
   },
   "home.feature2.description": {
-    en: "Up to 9 cards can be placed on an A4 sheet and the layout of printing can be adjusted.",
-    ja: "A4シートに最大9枚のカードを配置し、印刷のレイアウトを調整できます。",
+    en: "Arrange up to nine cards on an A4 sheet with adjustable spacing for perfect printing.",
+    ja: "A4シートに最大9枚のカードを配置し、完璧な印刷のために間隔を調整できます。",
   },
   "home.feature3.title": {
     en: "Multiple Export Options",
     ja: "複数の出力オプション",
   },
   "home.feature3.description": {
-    en: "Save your design in PNG or PDF format with a simple operation.",
-    ja: "簡単な操作でPNGまたはPDF形式でデザインを保存できます。",
+    en: "Save your designs in PNG or PDF format with professional print-ready settings.",
+    ja: "プロフェッショナルな印刷準備設定でPNGまたはPDF形式でデザインを保存できます。",
   },
   "footer.copyright": {
     en: "© 2025 TCG Proxy Creator. All rights reserved.",
-    ja: "© 2025 TCG Proxy Creator. All rights reserved.",
+    ja: "© 2025 TCGプロキシクリエーター. All rights reserved.",
   },
   "footer.terms": {
     en: "Terms",
@@ -122,11 +122,11 @@ const translations: Translations = {
   },
   "create.title": {
     en: "Create Proxy Cards",
-    ja: "プロキシカードの作成",
+    ja: "プロキシカード作成",
   },
   "create.settings.title": {
-    en: "Settings",
-    ja: "設定",
+    en: "Card Settings",
+    ja: "カード設定",
   },
   "create.export.title": {
     en: "Export Options",
@@ -160,6 +160,14 @@ const translations: Translations = {
     en: "Image Scale",
     ja: "画像スケール",
   },
+  "editor.positionX": {
+    en: "Position X",
+    ja: "X位置",
+  },
+  "editor.positionY": {
+    en: "Position Y",
+    ja: "Y位置",
+  },
   "editor.saveToCard": {
     en: "Save to Card",
     ja: "カードに保存",
@@ -169,8 +177,8 @@ const translations: Translations = {
     ja: "画像がアップロードされていません",
   },
   "layout.preview": {
-    en: "Preview",
-    ja: "プレビュー",
+    en: "A4 Print Layout Preview",
+    ja: "A4プリントレイアウトプレビュー",
   },
   "layout.emptyCard": {
     en: "Empty Card",
@@ -289,12 +297,12 @@ const translations: Translations = {
      ja: "CMYK変換モード",
    },
    "cmykMode.simple": { // New key for simple mode
-     en: "Simple",
-     ja: "シミュレーション",
+     en: "Simple (Simulation)",
+     ja: "シンプル (シミュレーション)",
    },
    "cmykMode.accurate": { // New key for accurate mode
-     en: "Accurate",
-     ja: "高精度",
+     en: "Accurate (Experimental)",
+     ja: "高精度 (実験的)",
    },
    // Remove unused keys: action.uploadImage, action.uploadToSelected
  }

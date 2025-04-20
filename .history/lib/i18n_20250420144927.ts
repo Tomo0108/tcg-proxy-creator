@@ -14,11 +14,11 @@ type Translations = {
 const translations: Translations = {
   "app.title": {
     en: "TCG Proxy Creator",
-    ja: "TCG Proxy Creator",
+    ja: "TCGプロキシクリエーター",
   },
   "app.description": {
     en: "Create high-quality proxy cards for trading card games",
-    ja: "トレーディングカードゲーム用の高品質なプロキシカードを作成",
+    ja: "トレーディングカードゲーム用の高品質プロキシカードを作成",
   },
   "nav.create": {
     en: "Create",
