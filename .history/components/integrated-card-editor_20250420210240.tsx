@@ -310,22 +310,15 @@ export function IntegratedCardEditor({
             setSelectedCardIndices([]);
           });
       }
-    } else {
        // Handle cases where files or targetIndices are missing
        if (!files || files.length === 0) { /* console.log("No files selected."); */ }
        if (!targetIndices || targetIndices.length === 0) { /* console.log("No target indices available."); */ }
-       // If processing wasn't started, ensure state is reset
-       // Check if isProcessingImage is true before resetting, to avoid unnecessary state updates
-       if (isProcessingImage) {
-           setIsProcessingImage(false); // Ensure reset only if processing was wrongly set to true
-       }
     }
 
     // Always reset the file input and the ref
-    if (e.target) e.target.value = ""; // Check if e.target exists
+    e.target.value = "";
     uploadTargetIndicesRef.current = null;
-  // Add dependencies for useCallback
-  }, [processImage, cardType, cardsPerRow, cardsPerColumn, onCardUpdate, currentPageIndex, isProcessingImage]); // Added isProcessingImage to dependencies
+  };
 
   // Handle click for the dedicated upload area
   const handleUploadButtonClick = () => {

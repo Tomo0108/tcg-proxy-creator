@@ -273,7 +273,6 @@ export function IntegratedCardEditor({
                 const cardData: CardData = {
                   image: imageDataUrl, scale: 1, type: cardType, originalSize, position: { x: 0, y: 0 }
                 };
-                // Validate index before calling onCardUpdate (using variables from useCallback dependency array)
                 if (cardsPerRow > 0 && cardsPerColumn > 0 && index >= 0 && index < cardsPerRow * cardsPerColumn) {
                   onCardUpdate(cardData, index);
                 } else {
@@ -314,18 +313,12 @@ export function IntegratedCardEditor({
        // Handle cases where files or targetIndices are missing
        if (!files || files.length === 0) { /* console.log("No files selected."); */ }
        if (!targetIndices || targetIndices.length === 0) { /* console.log("No target indices available."); */ }
-       // If processing wasn't started, ensure state is reset
-       // Check if isProcessingImage is true before resetting, to avoid unnecessary state updates
-       if (isProcessingImage) {
-           setIsProcessingImage(false); // Ensure reset only if processing was wrongly set to true
-       }
     }
 
     // Always reset the file input and the ref
-    if (e.target) e.target.value = ""; // Check if e.target exists
+    e.target.value = "";
     uploadTargetIndicesRef.current = null;
-  // Add dependencies for useCallback
-  }, [processImage, cardType, cardsPerRow, cardsPerColumn, onCardUpdate, currentPageIndex, isProcessingImage]); // Added isProcessingImage to dependencies
+  };
 
   // Handle click for the dedicated upload area
   const handleUploadButtonClick = () => {

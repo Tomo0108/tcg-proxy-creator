@@ -224,10 +224,10 @@ export function IntegratedCardEditor({
     reader.readAsDataURL(file);
   }, [onCardUpdate, cardType, t, cardsPerRow, cardsPerColumn, currentPageIndex]); // Added currentPageIndex dependency for toast
 
-  // Handle file selection for the dedicated upload area - Wrapped in useCallback
+  // Handle file selection for the dedicated upload area
   // If multiple slots are selected (targetIndices > 1), apply the FIRST selected file to ALL target slots.
   // Otherwise (single slot or no selection -> upload to empty), handle normally (multiple files to multiple slots).
-  const handleUploadFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     const targetIndices = uploadTargetIndicesRef.current; // Get the indices set by handleUploadButtonClick
 
@@ -239,7 +239,7 @@ export function IntegratedCardEditor({
       if (targetIndices.length > 1) {
         const firstFile = files[0]; // Get only the first selected file
         if (firstFile) {
-          // Call processImage directly as it's now in the same scope or accessible via useCallback dependencies
+          // Use the existing processImage function which handles multiple indices
           processImage(firstFile, targetIndices);
           // processImage already handles setIsProcessingImage(false) and setSelectedCardIndices([]) on completion/error
         } else {
@@ -257,7 +257,7 @@ export function IntegratedCardEditor({
         if (pairsToProcess.length === 0) {
           // toast({ title: "処理対象なし", description: "有効なファイルとスロットの組み合わせが見つかりません。", variant: "warning" });
           setIsProcessingImage(false);
-          if (e.target) e.target.value = ""; // Reset input
+          e.target.value = ""; // Reset input
           uploadTargetIndicesRef.current = null; // Clear ref
           return;
         }
@@ -273,59 +273,49 @@ export function IntegratedCardEditor({
                 const cardData: CardData = {
                   image: imageDataUrl, scale: 1, type: cardType, originalSize, position: { x: 0, y: 0 }
                 };
-                // Validate index before calling onCardUpdate (using variables from useCallback dependency array)
-                if (cardsPerRow > 0 && cardsPerColumn > 0 && index >= 0 && index < cardsPerRow * cardsPerColumn) {
-                  onCardUpdate(cardData, index);
-                } else {
-                   console.warn(`Invalid index ${index} skipped during multi-upload.`);
-                }
-                resolve();
-              };
-              img.onerror = () => reject(new Error(`画像読み込みエラー: ${file.name}`));
-              img.src = event.target?.result as string;
-            };
-            reader.onerror = () => reject(new Error(`ファイル読み込みエラー: ${file.name}`));
-            reader.readAsDataURL(file);
-          });
+          };
+          reader.onerror = () => reject(new Error(`ファイル読み込みエラー: ${file.name}`));
+          reader.readAsDataURL(file);
         });
+      });
 
-        Promise.allSettled(processPromises)
-          .then((results) => {
-            const successfulUploads = results.filter(r => r.status === 'fulfilled').length;
-            const failedUploads = results.filter(r => r.status === 'rejected');
-            if (successfulUploads > 0) {
-              // toast({ title: t("toast.imageAdded"), description: `${successfulUploads} 個の画像をスロット (Page ${currentPageIndex + 1}) に追加しました。` });
-            }
-            if (failedUploads.length > 0) {
-               failedUploads.forEach(result => {
-                 if (result.status === 'rejected') {
-                   console.error("Upload failed:", result.reason);
-                   // toast({ title: "一部画像の処理に失敗", description: result.reason?.message || "画像の処理中にエラーが発生しました。", variant: "destructive" });
-                 }
-               });
-            }
-          })
-          .finally(() => {
-            setIsProcessingImage(false);
-            setSelectedCardIndices([]);
-          });
-      }
+      // Wait for all file processing promises to settle
+      Promise.allSettled(processPromises) // Use allSettled to handle individual errors
+        .then((results) => {
+          const successfulUploads = results.filter(r => r.status === 'fulfilled').length;
+          const failedUploads = results.filter(r => r.status === 'rejected');
+
+          if (successfulUploads > 0) {
+            // toast({ title: t("toast.imageAdded"), description: `${successfulUploads} 個の画像をスロット (Page ${currentPageIndex + 1}) に追加しました。` });
+          }
+          if (failedUploads.length > 0) {
+             failedUploads.forEach(result => {
+               if (result.status === 'rejected') {
+                 console.error("Upload failed:", result.reason);
+                 // toast({ title: "一部画像の処理に失敗", description: result.reason?.message || "画像の処理中にエラーが発生しました。", variant: "destructive" });
+               }
+             });
+          }
+        })
+        .finally(() => {
+          setIsProcessingImage(false); // Reset processing state
+          setSelectedCardIndices([]); // Clear selection after upload
+        });
     } else {
        // Handle cases where files or targetIndices are missing
-       if (!files || files.length === 0) { /* console.log("No files selected."); */ }
-       if (!targetIndices || targetIndices.length === 0) { /* console.log("No target indices available."); */ }
-       // If processing wasn't started, ensure state is reset
-       // Check if isProcessingImage is true before resetting, to avoid unnecessary state updates
-       if (isProcessingImage) {
-           setIsProcessingImage(false); // Ensure reset only if processing was wrongly set to true
+       if (!files || files.length === 0) {
+         // console.log("No files selected."); // Log for debugging
+       }
+       if (!targetIndices || targetIndices.length === 0) {
+         // console.log("No target indices available."); // Log for debugging
+         // toast({ title: "アップロード先不明", description: "アップロード先のスロットが見つかりません。", variant: "warning" });
        }
     }
 
     // Always reset the file input and the ref
-    if (e.target) e.target.value = ""; // Check if e.target exists
+    e.target.value = "";
     uploadTargetIndicesRef.current = null;
-  // Add dependencies for useCallback
-  }, [processImage, cardType, cardsPerRow, cardsPerColumn, onCardUpdate, currentPageIndex, isProcessingImage]); // Added isProcessingImage to dependencies
+  };
 
   // Handle click for the dedicated upload area
   const handleUploadButtonClick = () => {
