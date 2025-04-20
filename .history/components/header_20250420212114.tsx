@@ -90,14 +90,11 @@ export function Header() {
               )
             })}
           </nav>
-          {/* デスクトップ用テーマボタンとLanguageSwitcher */}
+          {/* デスクトップ用テーマボタン */}
           <div className="flex items-center gap-2"> {/* gap-2 に変更 */}
-            {/* isMounted チェックを追加してボタン全体を囲む */}
-            {isMounted && (
-              <>
-                <Button
-                  variant="ghost" // 常に ghost に変更
-                  size="icon"
+             <Button
+               variant="ghost" // 常に ghost に変更
+               size="icon"
                onClick={() => setTheme('light')}
                aria-label="Set light theme"
                   className={cn(
@@ -123,9 +120,7 @@ export function Header() {
                   {isMounted && theme === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
                   <Moon className="h-[1.2rem] w-[1.2rem]" />
                 </Button>
-              </>
-            )}
-            <LanguageSwitcher /> {/* LanguageSwitcher は isMounted の外 */}
+               <LanguageSwitcher />
           </div>
         </div>
 
@@ -171,16 +166,12 @@ export function Header() {
                 {/* Mobile Controls */}
                 <div className="grid gap-6">
                    {/* モバイル用テーマボタン */}
-                   {/* モバイル用テーマボタン */}
                    <div className="flex items-center justify-between">
                      <span className="text-sm font-medium">Mode</span>
                      <div className="flex items-center gap-2"> {/* ボタンをグループ化 */}
-                       {/* isMounted チェックを追加してボタン全体を囲む */}
-                       {isMounted && (
-                         <>
-                           <Button
-                             variant="ghost" // 常に ghost に変更
-                             size="icon"
+                       <Button
+                         variant="ghost" // 常に ghost に変更
+                         size="icon"
                          onClick={() => { setTheme('light'); setIsMenuOpen(false); }} // メニューも閉じる
                          aria-label="Set light theme"
                           className={cn(
@@ -204,11 +195,9 @@ export function Header() {
                         >
                           {/* isMounted チェックを追加 */}
                           {isMounted && theme === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
-                             <Moon className="h-[1.2rem] w-[1.2rem]" />
-                           </Button>
-                         </>
-                       )}
-                     </div>
+                          <Moon className="h-[1.2rem] w-[1.2rem]" />
+                        </Button>
+                      </div>
                    </div>
                    <div className="flex items-center justify-between">
                      <span className="text-sm font-medium">Language</span>

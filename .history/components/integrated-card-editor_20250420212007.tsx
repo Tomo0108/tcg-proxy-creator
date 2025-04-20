@@ -267,13 +267,13 @@ export function IntegratedCardEditor({
           return new Promise<void>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (event) => {
-              const img = new Image();
               img.onload = () => {
                 const imageDataUrl = event.target?.result as string;
                 const originalSize = { width: img.width, height: img.height };
                 const cardData: CardData = {
                   image: imageDataUrl, scale: 1, type: cardType, originalSize, position: { x: 0, y: 0 }
                 };
+                // Validate index before calling onCardUpdate (using variables from useCallback dependency array)
                 if (cardsPerRow > 0 && cardsPerColumn > 0 && index >= 0 && index < cardsPerRow * cardsPerColumn) {
                   onCardUpdate(cardData, index);
                 } else {
@@ -307,21 +307,22 @@ export function IntegratedCardEditor({
           })
           .finally(() => {
             setIsProcessingImage(false);
-            // No need to clear selection here, as no slots were selected initially for multi-upload
-            // setSelectedCardIndices([]);
+            setSelectedCardIndices([]);
           });
       }
     } else {
        // Handle cases where files or targetIndices are missing
        if (!files || files.length === 0) { /* console.log("No files selected."); */ }
        if (!targetIndices || targetIndices.length === 0) { /* console.log("No target indices available."); */ }
+       // If processing wasn't started, ensure state is reset
+       // Check if isProcessingImage is true before resetting, to avoid unnecessary state updates
        if (isProcessingImage) {
-           setIsProcessingImage(false);
+           setIsProcessingImage(false); // Ensure reset only if processing was wrongly set to true
        }
     }
 
     // Always reset the file input and the ref
-    if (inputElement) inputElement.value = ""; // Use the stored reference
+    if (e.target) e.target.value = ""; // Check if e.target exists
     uploadTargetIndicesRef.current = null;
   // Add dependencies for useCallback
   }, [processImage, cardType, cardsPerRow, cardsPerColumn, onCardUpdate, currentPageIndex, isProcessingImage]); // Added isProcessingImage to dependencies
