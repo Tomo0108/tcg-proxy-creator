@@ -3,7 +3,6 @@
 import { Canvas, useThree } from "@react-three/fiber";
 import { CardInstances } from "./CardInstances";
 import { Suspense, useState, useEffect, useMemo } from "react";
-import { usePathname } from 'next/navigation'; // Import usePathname
 import * as THREE from "three";
 import { EffectComposer } from "@react-three/postprocessing";
 // Try importing DepthOfFieldEffect instead
@@ -17,42 +16,23 @@ function Effects() {
 
 export function FallingCardsCanvas() {
   const [isMobile, setIsMobile] = useState(false);
-  const [instanceCount, setInstanceCount] = useState(50);
-  const [dpr, setDpr] = useState(1);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const pathname = usePathname(); // Get current pathname
+  const [instanceCount, setInstanceCount] = useState(50); // Default for SSR/PC (Changed to 50)
+  const [dpr, setDpr] = useState(1); // Default DPR for SSR
 
   useEffect(() => {
     // This effect runs only on the client after mount
-    const checkEnvironment = () => {
+    const checkDevice = () => {
       const mobile = window.innerWidth < 768;
-      const standalone = window.matchMedia('(display-mode: standalone)').matches;
-
       setIsMobile(mobile);
-      setInstanceCount(mobile ? 25 : 50);
-      setDpr(Math.min(window.devicePixelRatio, 1.5));
-      setIsStandalone(standalone); // Update standalone state
+      setInstanceCount(mobile ? 25 : 50); // Adjust count based on width (Changed to 25/50)
+      setDpr(Math.min(window.devicePixelRatio, 1.5)); // Calculate DPR on client
     };
 
-    checkEnvironment(); // Initial check on mount
-    window.addEventListener("resize", checkEnvironment); // Update on resize
+    checkDevice(); // Initial check on mount
+    window.addEventListener("resize", checkDevice); // Update on resize
 
-    // Also listen for changes in display mode if possible, though resize often covers this
-    const mediaQueryList = window.matchMedia('(display-mode: standalone)');
-    const handleChange = () => setIsStandalone(mediaQueryList.matches);
-    mediaQueryList.addEventListener('change', handleChange);
-
-
-    return () => {
-      window.removeEventListener("resize", checkEnvironment); // Cleanup resize listener
-      mediaQueryList.removeEventListener('change', handleChange); // Cleanup media query listener
-    }
+    return () => window.removeEventListener("resize", checkDevice); // Cleanup listener
   }, []); // Empty dependency array ensures this runs only once on mount and cleanup on unmount
-
-  // If running in PWA standalone mode AND not on the homepage, don't render the canvas
-  if (isStandalone && pathname !== '/') {
-    return null;
-  }
 
   // Render null or a placeholder during SSR or before client-side check is complete
   // to avoid using potentially incorrect initial state for DPR/count.

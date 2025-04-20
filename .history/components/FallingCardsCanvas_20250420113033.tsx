@@ -3,7 +3,6 @@
 import { Canvas, useThree } from "@react-three/fiber";
 import { CardInstances } from "./CardInstances";
 import { Suspense, useState, useEffect, useMemo } from "react";
-import { usePathname } from 'next/navigation'; // Import usePathname
 import * as THREE from "three";
 import { EffectComposer } from "@react-three/postprocessing";
 // Try importing DepthOfFieldEffect instead
@@ -19,8 +18,7 @@ export function FallingCardsCanvas() {
   const [isMobile, setIsMobile] = useState(false);
   const [instanceCount, setInstanceCount] = useState(50);
   const [dpr, setDpr] = useState(1);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const pathname = usePathname(); // Get current pathname
+  const [isStandalone, setIsStandalone] = useState(false); // State to track PWA standalone mode
 
   useEffect(() => {
     // This effect runs only on the client after mount
@@ -49,8 +47,8 @@ export function FallingCardsCanvas() {
     }
   }, []); // Empty dependency array ensures this runs only once on mount and cleanup on unmount
 
-  // If running in PWA standalone mode AND not on the homepage, don't render the canvas
-  if (isStandalone && pathname !== '/') {
+  // If running in PWA standalone mode, don't render the canvas
+  if (isStandalone) {
     return null;
   }
 
