@@ -67,8 +67,10 @@ export function CardInstances({ count, isMobile }: CardInstancesProps) {
             rand(ROTATION_SPEED_MIN, ROTATION_SPEED_MAX),
             rand(ROTATION_SPEED_MIN, ROTATION_SPEED_MAX)
         ).multiplyScalar(speedFactor),
+        ).multiplyScalar(speedFactor),
         textureIndex: Math.floor(rand(0, NUM_FRONT_TEXTURES)),
-        // opacity, isFadingOut は削除
+        opacity: 1.0,
+        isFadingOut: false,
       });
     }
   }, [count, isMobile]);
@@ -140,29 +142,14 @@ export function CardInstances({ count, isMobile }: CardInstancesProps) {
             rand(ROTATION_SPEED_MIN, ROTATION_SPEED_MAX)
         ).multiplyScalar(speedFactor);
         data.textureIndex = Math.floor(rand(0, NUM_FRONT_TEXTURES));
-        // opacity, isFadingOut のリセットは不要
+        data.opacity = 1.0;
+        data.isFadingOut = false;
       }
 
       // 2. マトリックス計算 (dummyを使用)
       dummy.position.copy(data.position);
       dummy.rotation.copy(data.rotation);
-
-      // スケール計算 (フェードアウト処理)
-      let scale = 1.0;
-      if (data.position.y < FADE_OUT_START_Y) {
-        // FADE_OUT_START_Y から RESET_Y にかけてスケールを 1 から 0 に線形補間
-        scale = Math.max(0, (data.position.y - RESET_Y) / (FADE_OUT_START_Y - RESET_Y));
-      }
-      // リセット時は強制的にスケール1 (ただし、次のフレームで再計算される)
-      // needsReset フラグが true の場合でも、スケール計算は上記で行われるため、
-      // ここで明示的に scale = 1.0 とする必要はないかもしれません。
-      // リセット直後に一瞬消えるのを防ぐ意図ならこのままでも良いですが、
-      // スムーズさを優先するなら削除しても良いかもしれません。
-      // 一旦コメントアウトして様子を見ます。
-      // if (needsReset) {
-      //   scale = 1.0;
-      // }
-
+      const scale = needsReset ? 1 : (data.position.y <= FADE_OUT_END_Y ? 0 : 1);
       dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix();
 
