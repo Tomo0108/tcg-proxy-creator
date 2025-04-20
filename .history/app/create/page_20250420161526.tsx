@@ -33,13 +33,12 @@ export default function CreatePage() {
    // Change 'cards' state to 'pages' state (array of pages, each page is an array of cards)
    const [pages, setPages] = useState<(CardData | null)[][]>([Array(MAX_CARDS_PER_PAGE).fill(null)]);
    // Add state for the currently selected page index
-    const [currentPageIndex, setCurrentPageIndex] = useState(0);
-    const [exportQuality, setExportQuality] = useState<"standard" | "high" | "ultra">("high") // Add exportQuality state
-    const [exportScope, setExportScope] = useState<'current' | 'all'>('current'); // Add state for export scope
-    const isMobile = useMobileDetect()
- 
-   // Handle card creation or update for the current page
-   const handleCardUpdate = (card: CardData, index: number) => { // Use CardData type
+   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+   const [exportQuality, setExportQuality] = useState<"standard" | "high" | "ultra">("high") // Add exportQuality state
+   const isMobile = useMobileDetect()
+
+  // Handle card creation or update for the current page
+  const handleCardUpdate = (card: CardData, index: number) => { // Use CardData type
     setPages(prevPages => {
       const newPages = [...prevPages];
       const currentPage = [...(newPages[currentPageIndex] || [])]; // Get current page or empty array
@@ -212,28 +211,15 @@ export default function CreatePage() {
               cardType={cardType}
               spacing={spacing}
               cmykConversion={cmykConversion}
-              // Pass the cards for the current page
-              cards={pages[currentPageIndex] || []} // Ensure fallback to empty array
-              onCardUpdate={handleCardUpdate}
-              onCardRemove={handleCardRemove}
-              // Pass the reset function for the current page
-              onResetCards={handleResetCurrentPage} // Rename prop for clarity? Or keep as is? Let's keep for now.
-              exportQuality={exportQuality}
-              cmykMode={cmykMode}
-              // Pass page-related props
-              currentPageIndex={currentPageIndex}
-              pageCount={pages.length}
-              setCurrentPageIndex={setCurrentPageIndex}
-              addPage={addPage}
-              deletePage={deletePage}
-               // Pass all pages for potential multi-page export (if needed later)
-               allPages={pages}
-               // Pass export scope state and setter
-               exportScope={exportScope}
-               setExportScope={setExportScope}
-               />
-            </div>
-          </div>
+              cards={cards}
+                onCardUpdate={handleCardUpdate}
+                onCardRemove={handleCardRemove}
+                onResetCards={handleResetCards} // Pass reset function
+                exportQuality={exportQuality}
+                cmykMode={cmykMode} // Pass cmykMode prop
+              />
+           </div>
+         </div>
       </div>
       <Toaster />
     </div>

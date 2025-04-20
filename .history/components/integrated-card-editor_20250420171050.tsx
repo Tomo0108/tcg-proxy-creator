@@ -569,20 +569,19 @@ export function IntegratedCardEditor({
              printFrame.contentWindow.focus(); // Required for some browsers
              printFrame.contentWindow.print();
              // Cleanup is tricky because print dialog is modal.
-             // Removing automatic cleanup to prevent dialog from closing prematurely.
-             // Resource leak might occur, but browser should handle on tab close.
-             // setTimeout(() => { // Remove or comment out setTimeout
-               // if (printFrame) {
-               //   document.body.removeChild(printFrame); // Comment out cleanup
-               //   printFrame = null;
-               // }
-               // if (pdfUrl) {
-               //   URL.revokeObjectURL(pdfUrl); // Comment out cleanup
-               //   pdfUrl = null;
-               // }
-               setIsPrinting(false); // Keep resetting state
-               toast({ title: "印刷準備完了", description: "印刷ダイアログが表示されました。" }); // Keep toast
-             // }, 2000); // Remove or comment out setTimeout
+             // We'll use a timeout, assuming the user interacts within a reasonable time.
+             setTimeout(() => {
+               if (printFrame) {
+                 document.body.removeChild(printFrame);
+                 printFrame = null;
+               }
+               if (pdfUrl) {
+                 URL.revokeObjectURL(pdfUrl);
+                 pdfUrl = null;
+               }
+               setIsPrinting(false);
+               toast({ title: "印刷準備完了", description: "印刷ダイアログが表示されました。" });
+             }, 2000); // 2-second delay for cleanup
            } else {
              throw new Error("印刷フレームのコンテンツが見つかりません。");
            }

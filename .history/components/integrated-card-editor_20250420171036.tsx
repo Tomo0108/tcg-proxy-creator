@@ -547,98 +547,6 @@ export function IntegratedCardEditor({
 
        const options: PdfExportOptions = {
          pages: pagesToPrint,
-         spacing, cardType, cmykConversion, cmykMode,
-         dpi: printDpi,
-         dimensions: printDimensions,
-       };
-
-       const pdfBlob = await generatePDF(options);
-       pdfUrl = URL.createObjectURL(pdfBlob);
-
-       printFrame = document.createElement('iframe');
-       printFrame.style.position = 'absolute';
-       printFrame.style.width = '0';
-       printFrame.style.height = '0';
-       printFrame.style.border = '0';
-       printFrame.style.visibility = 'hidden';
-       printFrame.src = pdfUrl;
-
-       const handleLoad = () => {
-         try {
-           if (printFrame?.contentWindow) {
-             printFrame.contentWindow.focus(); // Required for some browsers
-             printFrame.contentWindow.print();
-             // Cleanup is tricky because print dialog is modal.
-             // Removing automatic cleanup to prevent dialog from closing prematurely.
-             // Resource leak might occur, but browser should handle on tab close.
-             // setTimeout(() => { // Remove or comment out setTimeout
-               // if (printFrame) {
-               //   document.body.removeChild(printFrame); // Comment out cleanup
-               //   printFrame = null;
-               // }
-               // if (pdfUrl) {
-               //   URL.revokeObjectURL(pdfUrl); // Comment out cleanup
-               //   pdfUrl = null;
-               // }
-               setIsPrinting(false); // Keep resetting state
-               toast({ title: "印刷準備完了", description: "印刷ダイアログが表示されました。" }); // Keep toast
-             // }, 2000); // Remove or comment out setTimeout
-           } else {
-             throw new Error("印刷フレームのコンテンツが見つかりません。");
-           }
-         } catch (printError) {
-           console.error("Printing failed:", printError);
-           toast({ title: "印刷エラー", description: `印刷の実行に失敗しました: ${printError instanceof Error ? printError.message : t("toast.unknownError")}`, variant: "destructive" });
-           // Cleanup on error
-           if (printFrame) document.body.removeChild(printFrame);
-           if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-           setIsPrinting(false);
-         }
-       };
-
-       const handleError = () => {
-         console.error("Failed to load PDF in iframe.");
-         toast({ title: "印刷準備エラー", description: "印刷用PDFの読み込みに失敗しました。", variant: "destructive" });
-         if (printFrame) document.body.removeChild(printFrame);
-         if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-         setIsPrinting(false);
-       };
-
-       printFrame.addEventListener('load', handleLoad);
-       printFrame.addEventListener('error', handleError);
-
-       document.body.appendChild(printFrame);
-
-     } catch (error) {
-       console.error("PDF generation for printing failed:", error);
-       toast({ title: "印刷準備エラー", description: `印刷用PDFの生成に失敗しました: ${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
-       // Ensure cleanup even if PDF generation fails
-       if (printFrame && printFrame.parentNode) document.body.removeChild(printFrame);
-       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-       setIsPrinting(false);
-     }
-   };
-   // --- End Print Handler ---
-
-  // File download helper
-  const downloadFile = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  // Calculate pixel values for styles (memoized)
-  const overlayStyles = useMemo(() => {
-      if (containerWidth <= 0 || cardsPerRow <= 0 || cardsPerColumn <= 0) return { display: 'none' };
-      const paddingLeftPx = mmToPixels(marginXMM);
-      const paddingTopPx = mmToPixels(marginYMM);
-      const gridWidthPx = mmToPixels(gridWidthMM);
-      const gridHeightPx = mmToPixels(gridHeightMM);
       if (![paddingLeftPx, paddingTopPx, gridWidthPx, gridHeightPx].every(Number.isFinite)) return { display: 'none' };
       return {
           paddingLeft: `${paddingLeftPx}px`, paddingTop: `${paddingTopPx}px`,
@@ -858,7 +766,7 @@ export function IntegratedCardEditor({
 
                    {/* Existing Export Buttons */}
                    <div className="flex space-x-2 justify-end w-full sm:w-auto">
-                     <Button variant="outline" onClick={handlePrint} disabled={isPrinting || isExporting || containerWidth <= 0} className="border-gold-500 flex-1 sm:flex-none sm:w-28">
+                     <Button variant="outline" onClick={() => window.print()} className="border-gold-500 flex-1 sm:flex-none sm:w-28">
                        <Printer className="mr-2 h-4 w-4" /> {t("action.print")}
                      </Button>
                      {exportScope === 'current' && (

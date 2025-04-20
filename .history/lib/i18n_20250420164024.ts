@@ -315,7 +315,7 @@ const translations: Translations = {
   },
   "action.resetAll": { // Changed meaning to "Reset Current Page"
     en: "Reset Page",
-    ja: "リセット",
+    ja: "ページリセット",
   },
    "action.clickOrDropToUpload": {
      en: "Click or drag & drop to upload image",
@@ -323,26 +323,8 @@ const translations: Translations = {
    },
    // Pagination (Existing + Added 'page')
    "pagination.previous": {
-     en: "Previous",
-     ja: "前へ",
-   },
-   "pagination.next": {
-     en: "Next",
-     ja: "次へ",
-   },
-   "pagination.page": {
-     en: "Page",
-     ja: "ページ",
-   },
-   "pagination.addPage": {
-     en: "Add Page",
-     ja: "ページ追加",
-   },
-   "pagination.deletePage": {
-     en: "Delete Page",
      ja: "ページ削除",
    },
-   // Quality (Existing)
    "quality.standard": {
      en: "Standard",
      ja: "標準",
@@ -355,20 +337,19 @@ const translations: Translations = {
     en: "Ultra",
      ja: "最高",
    },
-   // CMYK Mode (Existing)
-   "settings.cmykMode": {
+   "settings.cmykMode": { // New key for CMYK mode
      en: "CMYK Conversion Mode",
      ja: "CMYK変換モード",
    },
-   "cmykMode.simple": {
+   "cmykMode.simple": { // New key for simple mode
      en: "Simple",
      ja: "シミュレーション",
    },
-   "cmykMode.accurate": {
+   "cmykMode.accurate": { // New key for accurate mode
      en: "Accurate",
       ja: "高精度",
     },
-    // Export Scope (Existing + Added)
+    // Export Scope
     "export.scope.current": {
       en: "Current Page",
       ja: "現在のページ",
@@ -377,60 +358,32 @@ const translations: Translations = {
       en: "All Pages",
       ja: "全ページ",
     },
-    // Not Implemented Toast (Existing + Updated message)
+    // Not Implemented Toast
     "toast.notImplementedTitle": {
       en: "Feature Not Implemented",
       ja: "機能未実装",
     },
     "toast.notImplementedDescAllPages": {
-      en: "Exporting all pages as PNG is not yet supported. Please export the current page or use PDF.", // Updated message
-      ja: "全ページのPNGエクスポートはまだサポートされていません。現在のページをエクスポートするか、PDFを使用してください。",
+      en: "Exporting all pages is not yet supported. Only the current page will be exported.",
+      ja: "全ページのエクスポートはまだサポートされていません。現在のページのみがエクスポートされます。",
     },
-    // Removed unused keys: action.uploadImage, action.uploadToSelected (These were placeholders and not actually used)
+    // Remove unused keys: action.uploadImage, action.uploadToSelected
   }
-
-// Create a store for language state
+ 
+ // Create a store for language state
 interface LanguageState {
   locale: Locale
   setLocale: (locale: Locale) => void
 }
 
 export const useLanguageStore = create<LanguageState>((set) => ({
-  locale: "en", // Default locale
-  // Attempt to load locale from localStorage on initialization
-  // This part needs to run client-side only
-  // setLocale: (locale) => set({ locale }), // Original simple setter
-  // Enhanced setter with localStorage persistence
-  setLocale: (locale) => {
-    if (typeof window !== 'undefined') { // Ensure localStorage is available
-      try {
-        localStorage.setItem('locale', locale);
-      } catch (error) {
-        console.error("Failed to save locale to localStorage:", error);
-      }
-    }
-    set({ locale });
-  },
-}))
-
-// Initialize locale from localStorage client-side
-if (typeof window !== 'undefined') {
-  try {
-    const savedLocale = localStorage.getItem('locale') as Locale | null;
-    if (savedLocale && (savedLocale === 'en' || savedLocale === 'ja')) {
-      // Directly set the initial state if localStorage has a valid value
-      // Zustand's `set` isn't directly available here, so we use the store's `setState`
-      useLanguageStore.setState({ locale: savedLocale });
-    }
-  } catch (error) {
-    console.error("Failed to load locale from localStorage:", error);
-  }
-}
-
-
+  locale: "en",
+  setLocale: (locale) => set({ locale }),
+ }))
+ 
  export function useTranslation() {
    const { locale, setLocale } = useLanguageStore()
-
+ 
    // Modify t function to accept replacements
    const t = (key: string, replacements?: Record<string, string | number>): string => {
      let translation = key; // Default to key if not found
@@ -438,31 +391,18 @@ if (typeof window !== 'undefined') {
        translation = translations[key][locale];
      } else {
        console.warn(`Translation missing for key: ${key}`);
-       // Try splitting the key and looking up parts (basic fallback)
-       const parts = key.split('.');
-       if (parts.length > 1) {
-         const lastPart = parts.pop();
-         const parentKey = parts.join('.');
-         if (translations[parentKey] && typeof translations[parentKey][locale] === 'object') {
-            // This case is unlikely with the current flat structure but added for robustness
-            // translation = (translations[parentKey][locale] as any)[lastPart || ''] || key;
-         } else if (lastPart) {
-            // Simple fallback: return the last part of the key capitalized
-            translation = lastPart.charAt(0).toUpperCase() + lastPart.slice(1);
-         }
-       }
      }
-
+ 
      // Perform replacements if provided
-     if (replacements && translation !== key) { // Only replace if translation was found
+     if (replacements) {
        Object.keys(replacements).forEach((placeholder) => {
          const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
          translation = translation.replace(regex, String(replacements[placeholder]));
        });
      }
-
+ 
      return translation;
    }
-
+ 
    return { t, locale, setLocale }
  }

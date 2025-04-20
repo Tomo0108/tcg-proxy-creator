@@ -69,7 +69,6 @@ export function IntegratedCardEditor({
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false); // Add printing state
 
   // Refs
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -260,23 +259,119 @@ export function IntegratedCardEditor({
             img.onerror = () => reject(new Error(`画像読み込みエラー: ${file.name}`));
             img.src = event.target?.result as string;
           };
-          reader.onerror = () => reject(new Error(`ファイル読み込みエラー: ${file.name}`));
+    const targetIndices = uploadTargetIndicesRef.current; // 配列を取得
+
+    if (files && files.length > 0 && targetIndices && targetIndices.length > 0) {
+      console.log(`Processing ${files.length} images via upload area for indices: ${targetIndices.join(', ')}`);
+
+      // Determine how many files to process (up to the number of target slots)
+      const filesToProcess = Array.from(files).slice(0, targetIndices.length);
+
+      // Process each file for a corresponding target index
+      filesToProcess.forEach((file, i) => {
+        const targetIndex = targetIndices[i];
+        if (targetIndex !== undefined) { // Ensure the index exists
+          console.log(`Processing file ${i + 1} for target index ${targetIndex}`);
+          // We need a way to process each file individually.
+          // Modifying processImage or creating a new function might be needed.
+          // For now, let's adapt the existing processImage logic inline or call it repeatedly.
+          // Calling processImage repeatedly might trigger multiple toasts and state updates inefficiently.
+          // Let's try processing them in a batch.
+
+          // --- Inline processing logic (similar to processImage but for one file/index pair) ---
+          setIsProcessingImage(true); // Set processing state
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              const imageDataUrl = event.target?.result as string;
+              const originalSize = { width: img.width, height: img.height };
+              const cardData = {
+                image: imageDataUrl,
+                scale: 1,
+                type: cardType,
+                originalSize,
+                position: { x: 0, y: 0 }
+              };
+              if (cardsPerRow > 0 && cardsPerColumn > 0 && targetIndex >= 0 && targetIndex < cardsPerRow * cardsPerColumn) {
+                onCardUpdate(cardData, targetIndex);
+              }
+              // Consider moving toast and state reset outside the loop for batch completion message
+              // toast({ title: t("toast.imageAdded"), description: `画像をスロット ${targetIndex + 1} に追加しました。` });
+              // setIsProcessingImage(false); // Reset processing state after each file? Or after all?
+            };
+            img.onerror = () => {
+              toast({ title: "画像読み込みエラー", description: `ファイル ${file.name} の読み込みに失敗しました。`, variant: "destructive" });
+              // setIsProcessingImage(false); // Reset on error
+            };
+            img.src = event.target?.result as string;
+          };
+          reader.onerror = () => {
+            toast({ title: "ファイル読み込みエラー", description: `ファイル ${file.name} の読み込みに失敗しました。`, variant: "destructive" });
+            // setIsProcessingImage(false); // Reset on error
+          };
+          reader.readAsDataURL(file);
+          // --- End of inline processing logic ---
+        }
+      });
+
+      // After loop: Show a single toast for batch completion and reset state
+      // Need to wait for all file readers to complete. Using Promise.all might be better.
+      // Let's refine this with Promise.all.
+
+      // --- Refined processing with Promise.all ---
+      setIsProcessingImage(true);
+      const processPromises = filesToProcess.map((file, i) => {
+        const targetIndex = targetIndices[i];
+        if (targetIndex === undefined) return Promise.resolve(); // Skip if no target index
+
+        return new Promise<void>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              const imageDataUrl = event.target?.result as string;
+              const originalSize = { width: img.width, height: img.height };
+              const cardData = {
+                image: imageDataUrl, scale: 1, type: cardType, originalSize, position: { x: 0, y: 0 }
+              };
+              if (cardsPerRow > 0 && cardsPerColumn > 0 && targetIndex >= 0 && targetIndex < cardsPerRow * cardsPerColumn) {
+                onCardUpdate(cardData, targetIndex);
+              }
+              resolve();
+            };
+            img.onerror = () => {
+              console.error(`Error loading image: ${file.name}`);
+              reject(new Error(`画像読み込みエラー: ${file.name}`));
+            };
+            img.src = event.target?.result as string;
+          };
+          reader.onerror = () => {
+            console.error(`Error reading file: ${file.name}`);
+            reject(new Error(`ファイル読み込みエラー: ${file.name}`));
+          };
           reader.readAsDataURL(file);
         });
       });
 
       Promise.all(processPromises)
         .then(() => {
-          toast({ title: t("toast.imageAdded"), description: `${filesToProcess.length} 個の画像をスロット (Page ${currentPageIndex + 1}) に追加しました。` });
+          toast({ title: t("toast.imageAdded"), description: `${filesToProcess.length} 個の画像をスロットに追加しました。` });
         })
         .catch((error) => {
           toast({ title: "一部画像の処理に失敗", description: error.message || "画像の処理中にエラーが発生しました。", variant: "destructive" });
         })
         .finally(() => {
           setIsProcessingImage(false);
-          setSelectedCardIndices([]);
+          setSelectedCardIndices([]); // Reset selection after processing
         });
+      // --- End of refined processing ---
+
+    } else {
+      console.warn("Upload area file change triggered without valid files or target indices.");
     }
+
+    // Reset input value and target indices regardless of success/failure
     e.target.value = "";
     uploadTargetIndicesRef.current = null;
   };
@@ -284,47 +379,62 @@ export function IntegratedCardEditor({
   // Handle click for the dedicated upload area
   const handleUploadButtonClick = () => {
     let targetIndices: number[] | null = null;
-    const maxSlots = cardsPerRow * cardsPerColumn;
 
+    // Priority 1: Use all selected indices if available
     if (selectedCardIndices.length > 0) {
-      targetIndices = [...selectedCardIndices];
+      targetIndices = [...selectedCardIndices]; // 選択中のインデックス全てをコピー
+      console.log(`Upload area target: Selected indices ${targetIndices.join(', ')}`);
     } else {
+      // Priority 2: Find up to 9 empty slots
       const emptyIndices: number[] = [];
-      for (let i = 0; i < maxSlots && emptyIndices.length < 9; i++) {
-        const card = cards[i]; // Use 'cards' prop (current page)
-        if (card == null || card.image == null) {
-          emptyIndices.push(i);
-        }
-      }
+       const maxSlots = cardsPerRow * cardsPerColumn;
+       for (let i = 0; i < maxSlots && emptyIndices.length < 9; i++) {
+         // Explicitly check for null before accessing properties
+         const card = cards[i];
+         if (card == null || card.image == null) { // Check if card or card.image is null/undefined
+           emptyIndices.push(i);
+         }
+       }
+
       if (emptyIndices.length > 0) {
         targetIndices = emptyIndices;
+        console.log(`Upload area target: Empty indices ${targetIndices.join(', ')}`);
+      } else {
+         console.log("Upload area target: No empty slots found.");
       }
     }
 
     if (targetIndices && targetIndices.length > 0) {
-      const validTargetIndices = targetIndices.filter(idx => idx >= 0 && idx < maxSlots);
+      // Filter out invalid indices just in case
+      const validTargetIndices = targetIndices.filter(idx => idx >= 0 && idx < cardsPerRow * cardsPerColumn);
       if (validTargetIndices.length > 0) {
-        uploadTargetIndicesRef.current = validTargetIndices;
-        uploadInputRef.current?.click();
+        uploadTargetIndicesRef.current = validTargetIndices; // Store the valid target indices
+        uploadInputRef.current?.click(); // Trigger the hidden input
       } else {
         toast({ title: "アップロード先なし", description: "有効なアップロード先スロットが見つかりません。", variant: "destructive" });
+        console.log("Upload area: No valid target slot found.");
       }
     } else {
       toast({ title: "アップロード先なし", description: "選択中のスロット、または空きスロットがありません。", variant: "destructive" });
+      console.log("Upload area: No target slot found (grid full or invalid state).");
     }
   };
 
-  // Render canvas based on current page's cards ('cards' prop)
+  // renderCanvas depends on containerWidth via mmToPixels
   const renderCanvas = useCallback(() => {
-    if (!canvasRef.current || !printRef.current || containerWidth <= 0 || !Number.isFinite(containerWidth)) return;
+    if (!canvasRef.current || !printRef.current || containerWidth <= 0 || !Number.isFinite(containerWidth)) {
+        return;
+    }
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d", { alpha: false });
-    if (!ctx) return;
-
+    if (!ctx) {
+        return;
+    }
     const displayWidth = containerWidth;
     const displayHeight = (containerWidth / a4Width) * a4Height;
-    if (displayWidth <= 0 || displayHeight <= 0 || !Number.isFinite(displayWidth) || !Number.isFinite(displayHeight)) return;
-
+    if (displayWidth <= 0 || displayHeight <= 0 || !Number.isFinite(displayWidth) || !Number.isFinite(displayHeight)) {
+        return;
+    }
     if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
         canvas.width = displayWidth;
         canvas.height = displayHeight;
@@ -333,8 +443,9 @@ export function IntegratedCardEditor({
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-
-    if (cardsPerRow <= 0 || cardsPerColumn <= 0) return;
+    if (cardsPerRow <= 0 || cardsPerColumn <= 0) {
+        return;
+    }
 
     const loadPromises = cards.slice(0, cardsPerRow * cardsPerColumn).map((card, index) => {
       const row = Math.floor(index / cardsPerRow);
@@ -345,7 +456,7 @@ export function IntegratedCardEditor({
       const drawCardHeightBg = mmToPixels(cardHeightMM);
 
       if (drawCardWidthBg > 0 && drawCardHeightBg > 0) {
-          ctx.fillStyle = "#f0f0f0";
+          ctx.fillStyle = "#f0f0f0"; // 背景色を少し薄く
           ctx.fillRect(drawXBg, drawYBg, drawCardWidthBg, drawCardHeightBg);
       }
 
@@ -355,32 +466,36 @@ export function IntegratedCardEditor({
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
-          const drawX = drawXBg; const drawY = drawYBg;
-          const drawCardWidth = drawCardWidthBg; const drawCardHeight = drawCardHeightBg;
-          if (drawCardWidth <= 0 || drawCardHeight <= 0) { resolve(); return; }
+          const drawX = drawXBg;
+          const drawY = drawYBg;
+          const drawCardWidth = drawCardWidthBg;
+          const drawCardHeight = drawCardHeightBg;
 
+          if (drawCardWidth <= 0 || drawCardHeight <= 0) {
+              resolve(); return;
+          }
           ctx.save();
-          ctx.beginPath(); ctx.rect(drawX, drawY, drawCardWidth, drawCardHeight); ctx.clip();
-
-          const originalImgWidth = card.originalSize?.width || img.width;
-          const originalImgHeight = card.originalSize?.height || img.height;
-          const imgAspectRatio = originalImgWidth / originalImgHeight;
+          ctx.beginPath();
+          ctx.rect(drawX, drawY, drawCardWidth, drawCardHeight);
+          ctx.clip();
+          const imgAspectRatio = img.width / img.height;
           const cardAspectRatio = drawCardWidth / drawCardHeight;
           const cardScale = card.scale || 1;
-          const cardPosition = card.position || { x: 0, y: 0 };
-
           let baseWidth, baseHeight;
+          // 画像をカードに合わせて中央揃えで表示 (Aspect Fill)
           if (imgAspectRatio > cardAspectRatio) {
-             baseHeight = drawCardHeight; baseWidth = baseHeight * imgAspectRatio;
+             baseHeight = drawCardHeight;
+             baseWidth = baseHeight * imgAspectRatio;
           } else {
-             baseWidth = drawCardWidth; baseHeight = baseWidth / imgAspectRatio;
+             baseWidth = drawCardWidth;
+             baseHeight = baseWidth / imgAspectRatio;
           }
           const targetWidth = baseWidth * cardScale;
           const targetHeight = baseHeight * cardScale;
-
-          // Calculate offset including cardPosition adjustment (position.x/y range -1 to 1)
-          const offsetX = (drawCardWidth - targetWidth) / 2 + cardPosition.x * Math.abs(drawCardWidth - targetWidth) / 2;
-          const offsetY = (drawCardHeight - targetHeight) / 2 + cardPosition.y * Math.abs(drawCardHeight - targetHeight) / 2;
+          // 画像の位置調整 (position を考慮)
+          const cardPosition = card.position || { x: 0, y: 0 };
+          const offsetX = (drawCardWidth - targetWidth) / 2 + cardPosition.x * (drawCardWidth / 2); // position.x は -1 から 1 の範囲を想定
+          const offsetY = (drawCardHeight - targetHeight) / 2 + cardPosition.y * (drawCardHeight / 2); // position.y は -1 から 1 の範囲を想定
           const imgDrawX = drawX + offsetX;
           const imgDrawY = drawY + offsetY;
 
@@ -408,42 +523,51 @@ export function IntegratedCardEditor({
     });
 
     Promise.all(loadPromises).catch(err => {
-        console.error("Error during image loading/drawing:", err);
+        console.error("Error during image loading/drawing:", err); // Add comma
     });
-  }, [cards, spacing, cardType, a4Width, a4Height, cardWidthMM, cardHeightMM, marginXMM, marginYMM, cardsPerRow, cardsPerColumn, mmToPixels, containerWidth]); // Use 'cards' prop
+  }, [cards, spacing, cardType, a4Width, a4Height, cardWidthMM, cardHeightMM, marginXMM, marginYMM, cardsPerRow, cardsPerColumn, mmToPixels, containerWidth]); // Corrected closing brace and dependency array
 
   // useEffect to setup ResizeObserver and update containerWidth
   useEffect(() => {
     const element = printRef.current;
-    if (!element) return;
+    if (!element) {
+        return;
+    }
     let animationFrameId: number | null = null;
     const observer = new ResizeObserver(entries => {
-        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        if (animationFrameId) { cancelAnimationFrame(animationFrameId); }
         animationFrameId = requestAnimationFrame(() => {
             for (let entry of entries) {
                 const newWidth = entry.contentRect.width;
                 if (newWidth > 0 && Number.isFinite(newWidth)) {
-                    setContainerWidth(prevWidth => newWidth !== prevWidth ? newWidth : prevWidth);
+                    setContainerWidth(prevWidth => {
+                        if (newWidth !== prevWidth) {
+                            return newWidth;
+                        }
+                        return prevWidth;
+                    });
+                } else if (newWidth <= 0) {
+                    // console.warn(`ResizeObserver callback: Width became zero or invalid (${newWidth})`);
                 }
             }
         });
     });
     observer.observe(element, { box: 'content-box' });
     return () => {
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      if (element) observer.unobserve(element);
+      if (animationFrameId) { cancelAnimationFrame(animationFrameId); }
+      if (element) { observer.unobserve(element); }
       observer.disconnect();
     };
   }, []);
 
-  // useEffect to trigger renderCanvas when containerWidth or dependencies change
+  // useEffect to trigger renderCanvas when containerWidth is ready or renderCanvas definition changes
   useEffect(() => {
     if (containerWidth > 0) {
       renderCanvas();
     }
-  }, [containerWidth, renderCanvas]); // renderCanvas depends on 'cards' prop now
+  }, [containerWidth, renderCanvas]);
 
-  // Get DPI for export based on quality prop
+  // Get DPI for export
   const getDpiForQuality = useCallback(() => {
     switch (exportQuality) {
       case "standard": return 300;
@@ -453,172 +577,88 @@ export function IntegratedCardEditor({
     }
   }, [exportQuality]);
 
-   // --- Export Handlers ---
+   // Export functions
    const handleExportPDF = async () => {
-     if (containerWidth <= 0) {
+     const currentCanvas = canvasRef.current; // チェック用に変数に入れる
+     if (!currentCanvas || containerWidth <= 0) { // currentCanvas をチェック
          toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
          return;
-     }
-     setIsExporting(true);
-     try {
-       const pagesToExport = exportScope === 'all' ? allPages : [cards]; // Use allPages or current page's cards
-       const exportDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
-       const exportDpi = getDpiForQuality();
+    }
+    // Check export scope - REMOVED 'all' check for PDF
 
+    setIsExporting(true);
+    try {
+       // Prepare pages data based on exportScope
+       const pagesToExport = exportScope === 'all'
+         ? allPages // Use all pages data
+         : [cards]; // Use only the current page data, wrapped in an array
+
+       // Show a different toast message when exporting all pages
        if (exportScope === 'all') {
          toast({ title: t("toast.exportingAllTitle"), description: t("toast.exportingAllDescPdf") });
-       } else if (exportQuality === "ultra") {
+       } else if (exportQuality === "ultra") { // Keep ultra quality toast for single page
           toast({ title: "高品質出力処理中", description: "高解像度PDFの生成には時間がかかる場合があります。" });
        }
 
-       const options: PdfExportOptions = { // Use PdfExportOptions type
-         pages: pagesToExport,
+       const options = {
+         pages: pagesToExport, // Pass the prepared pages data
          spacing, cardType, cmykConversion, cmykMode,
-         dpi: exportDpi,
-         dimensions: exportDimensions,
+         dpi: getDpiForQuality(),
+         // canvas is removed from PDF options
+         dimensions: { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn },
        };
        const pdfBlob = await generatePDF(options);
-       downloadFile(pdfBlob, `tcg-proxy-cards-${exportScope}-${exportDpi}dpi.pdf`);
+       downloadFile(pdfBlob, "tcg-proxy-cards.pdf");
        toast({ title: t("toast.pdfSuccess"), description: t("toast.pdfSuccessDesc") });
      } catch (error) {
       console.error("PDF export failed:", error);
-      toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
+      toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("unknown error")}`, variant: "destructive" });
     } finally {
       setIsExporting(false);
     }
    }
-
+ 
    const handleExportPNG = async () => {
-      const currentCanvas = canvasRef.current;
-      if (!currentCanvas || containerWidth <= 0) {
+      const currentCanvas = canvasRef.current; // チェック用に変数に入れる
+      if (!currentCanvas || containerWidth <= 0) { // currentCanvas をチェック
          toast({ title: "エクスポート不可", description: "プレビューの準備ができていません。", variant: "destructive" });
          return;
-      }
-      if (exportScope === 'all') {
-        toast({ title: t("toast.notImplementedTitle"), description: t("toast.notImplementedDescAllPages"), variant: "default" });
-        return;
-      }
+    }
+    // Check export scope
+    if (exportScope === 'all') {
+      toast({
+        title: t("toast.notImplementedTitle"),
+        description: t("toast.notImplementedDescAllPages"),
+        variant: "default", // Use default variant for info
+      });
+      return; // Stop execution if 'all' is selected
+    }
 
-      setIsExporting(true);
-      try {
-        if (exportQuality === "ultra") {
-           toast({ title: "高品質出力処理中", description: "高解像度PNGの生成には時間がかかる場合があります。" });
-         }
-         // Filter out null cards from the CURRENT page ('cards' prop)
-         const validCards = cards.filter((card): card is CardData => card !== null);
-         const exportDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
-         const exportDpi = getDpiForQuality();
-
-         const options: PngExportOptions = { // Use PngExportOptions type
-           cards: validCards, // Pass only valid cards from the current page
+    setIsExporting(true);
+    try {
+      if (exportQuality === "ultra") {
+         toast({ title: "高品質出力処理中", description: "高解像度PNGの生成には時間がかかる場合があります。" });
+       }
+       // Filter out null cards from the CURRENT page before passing to generatePNG
+       const validCards = cards.filter((card): card is CardData => card !== null);
+         const options = {
+           cards: validCards,
            spacing, cardType, cmykConversion, cmykMode,
-           dpi: exportDpi,
-           canvas: currentCanvas, // Pass preview canvas for fallback
-           dimensions: exportDimensions,
+           dpi: getDpiForQuality(),
+           canvas: currentCanvas, // null でないことが保証された canvas を渡す
+           dimensions: { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn },
          };
         const pngBlob = await generatePNG(options);
-        downloadFile(pngBlob, `tcg-proxy-cards-page${currentPageIndex + 1}-${exportDpi}dpi.png`);
-        toast({ title: t("toast.pngSuccess"), description: t("toast.pngSuccessDesc") });
-      } catch (error) {
-        console.error("PNG export failed:", error);
-        toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
-      } finally {
-        setIsExporting(false);
-      }
-   }
-   // --- End Export Handlers ---
-
-   // --- Print Handler ---
-   const handlePrint = async () => {
-     if (isPrinting || isExporting || containerWidth <= 0) {
-       toast({ title: "印刷不可", description: "現在他の処理を実行中か、プレビューの準備ができていません。", variant: "destructive" });
-       return;
-     }
-     setIsPrinting(true);
-     toast({ title: "印刷準備中", description: "高品質な印刷用データを生成しています..." });
-
-     let printFrame: HTMLIFrameElement | null = null;
-     let pdfUrl: string | null = null;
-
-     try {
-       const pagesToPrint = exportScope === 'all' ? allPages : [cards];
-       const printDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
-       const printDpi = getDpiForQuality(); // Use export quality for printing
-
-       const options: PdfExportOptions = {
-         pages: pagesToPrint,
-         spacing, cardType, cmykConversion, cmykMode,
-         dpi: printDpi,
-         dimensions: printDimensions,
-       };
-
-       const pdfBlob = await generatePDF(options);
-       pdfUrl = URL.createObjectURL(pdfBlob);
-
-       printFrame = document.createElement('iframe');
-       printFrame.style.position = 'absolute';
-       printFrame.style.width = '0';
-       printFrame.style.height = '0';
-       printFrame.style.border = '0';
-       printFrame.style.visibility = 'hidden';
-       printFrame.src = pdfUrl;
-
-       const handleLoad = () => {
-         try {
-           if (printFrame?.contentWindow) {
-             printFrame.contentWindow.focus(); // Required for some browsers
-             printFrame.contentWindow.print();
-             // Cleanup is tricky because print dialog is modal.
-             // Removing automatic cleanup to prevent dialog from closing prematurely.
-             // Resource leak might occur, but browser should handle on tab close.
-             // setTimeout(() => { // Remove or comment out setTimeout
-               // if (printFrame) {
-               //   document.body.removeChild(printFrame); // Comment out cleanup
-               //   printFrame = null;
-               // }
-               // if (pdfUrl) {
-               //   URL.revokeObjectURL(pdfUrl); // Comment out cleanup
-               //   pdfUrl = null;
-               // }
-               setIsPrinting(false); // Keep resetting state
-               toast({ title: "印刷準備完了", description: "印刷ダイアログが表示されました。" }); // Keep toast
-             // }, 2000); // Remove or comment out setTimeout
-           } else {
-             throw new Error("印刷フレームのコンテンツが見つかりません。");
-           }
-         } catch (printError) {
-           console.error("Printing failed:", printError);
-           toast({ title: "印刷エラー", description: `印刷の実行に失敗しました: ${printError instanceof Error ? printError.message : t("toast.unknownError")}`, variant: "destructive" });
-           // Cleanup on error
-           if (printFrame) document.body.removeChild(printFrame);
-           if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-           setIsPrinting(false);
-         }
-       };
-
-       const handleError = () => {
-         console.error("Failed to load PDF in iframe.");
-         toast({ title: "印刷準備エラー", description: "印刷用PDFの読み込みに失敗しました。", variant: "destructive" });
-         if (printFrame) document.body.removeChild(printFrame);
-         if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-         setIsPrinting(false);
-       };
-
-       printFrame.addEventListener('load', handleLoad);
-       printFrame.addEventListener('error', handleError);
-
-       document.body.appendChild(printFrame);
-
-     } catch (error) {
-       console.error("PDF generation for printing failed:", error);
-       toast({ title: "印刷準備エラー", description: `印刷用PDFの生成に失敗しました: ${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
-       // Ensure cleanup even if PDF generation fails
-       if (printFrame && printFrame.parentNode) document.body.removeChild(printFrame);
-       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-       setIsPrinting(false);
-     }
-   };
-   // --- End Print Handler ---
+      // TODO: Implement multi-page PNG export (e.g., zip) when exportScope is 'all'
+      downloadFile(pngBlob, "tcg-proxy-cards.png");
+      toast({ title: t("toast.pngSuccess"), description: t("toast.pngSuccessDesc") });
+    } catch (error) {
+      console.error("PNG export failed:", error);
+      toast({ title: t("toast.exportError"), description: `${t("toast.exportErrorDesc")}${error instanceof Error ? error.message : t("unknown error")}`, variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   // File download helper
   const downloadFile = (blob: Blob, filename: string) => {
@@ -643,7 +683,7 @@ export function IntegratedCardEditor({
       return {
           paddingLeft: `${paddingLeftPx}px`, paddingTop: `${paddingTopPx}px`,
           width: `${gridWidthPx}px`, height: `${gridHeightPx}px`,
-          pointerEvents: "none" as const,
+          pointerEvents: "none" as const, // Overlay自体はイベントを受け取らない
       };
   }, [containerWidth, cardsPerRow, cardsPerColumn, marginXMM, marginYMM, gridWidthMM, gridHeightMM, mmToPixels]);
 
@@ -669,19 +709,24 @@ export function IntegratedCardEditor({
           <CardContent className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">{t("layout.preview")}</h3>
-              {/* Reset Button - Calls onResetCards prop */}
+              {/* Reset Button */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
+                     {/* Apply the new class string and remove variant/size, set text color based on mode */}
                      <Button
-                       onClick={onResetCards} // Use prop
-                       className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-gray-900 dark:text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 flex-1 sm:flex-none sm:w-28"
+                       onClick={onResetCards}
+                       className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background text-gray-900 dark:text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-gold-500 flex-1 sm:flex-none sm:w-28" // Changed text-white to text-gray-900 dark:text-white
                      >
+                       {/* Keep the icon */}
                        <RotateCcw className="h-4 w-4" />
-                      <span>{t("action.resetAll")}</span> {/* Text updated in i18n to "Reset Page" */}
+                      {/* Ensure span is visible */}
+                      <span>{t("action.resetAll")}</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent><p>{t("action.resetAll")}</p></TooltipContent>
+                  <TooltipContent>
+                    <p>{t("action.resetAll")}</p>
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -704,48 +749,52 @@ export function IntegratedCardEditor({
                 />
                 {overlayStyles.display !== 'none' && gridStyles.display !== 'none' && (
                   <div
-                    className="absolute top-0 left-0 w-full h-full z-10"
+                    className="absolute top-0 left-0 w-full h-full z-10" // z-10 を追加
                     style={overlayStyles}
                   >
                     <div className="grid h-full w-full" style={gridStyles}>
-                      {/* Multi-select hidden input */}
+                      {/* 複数選択用の隠し Input */}
                       <Input
                         ref={(el) => { inputRefs.current[-1] = el; }}
                         type="file" accept="image/*" className="hidden"
                         onChange={(e) => handleFileChange(e, -1)}
                       />
-                      {/* Grid Cells */}
                       {Array(cardsPerRow * cardsPerColumn).fill(0).map((_, index) => (
                         <div
-                          key={`card-slot-${currentPageIndex}-${index}`} // Add currentPageIndex to key for reactivity
+                          key={index}
                           className={cn(
-                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10 select-none",
-                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : ""
+                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10 select-none", // select-none を追加
+                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
                           )}
-                          style={{ pointerEvents: "auto", touchAction: 'none' }}
-                          onPointerDown={() => handlePointerDown(index)}
-                          onPointerUp={() => handlePointerUp(index)}
-                          onPointerLeave={() => handlePointerLeave(index)}
-                          onContextMenu={(e) => e.preventDefault()}
+                          style={{ pointerEvents: "auto", touchAction: 'none' }} // pointerEvents: "auto" を明示
+                          onPointerDown={() => handlePointerDown(index)} // Use PointerDown
+                          onPointerUp={() => handlePointerUp(index)}     // Use PointerUp
+                          onPointerLeave={() => handlePointerLeave(index)} // Use PointerLeave
+                          onContextMenu={(e) => e.preventDefault()} // コンテキストメニューを無効化
                         >
-                          {/* Individual hidden input */}
+                          {/* 個別の隠し Input */}
                           <Input
-                            ref={(el) => { if (index >= 0 && index < (cardsPerRow * cardsPerColumn)) { inputRefs.current[index] = el; } }}
+                            ref={(el) => {
+                                if (index >= 0 && index < (cardsPerRow * cardsPerColumn)) {
+                                    inputRefs.current[index] = el;
+                                }
+                            }}
                             type="file" accept="image/*" className="hidden"
                             onChange={(e) => handleFileChange(e, index)}
                            />
-                           {/* Remove Button - Uses onCardRemove prop */}
-                           {cards[index] != null && ( // Check 'cards' prop
+                           {/* 削除ボタン (null チェックを明示的に) */}
+                           {cards[index] != null && (
                              <Button
                                variant="destructive" size="icon"
-                               className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0 pointer-events-auto"
+                               className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0 pointer-events-auto" // z-20 を追加
                               onClick={(e) => {
-                                e.stopPropagation();
-                                onCardRemove(index); // Use prop
+                                e.stopPropagation(); // 親要素へのイベント伝播を停止
+                                onCardRemove(index);
                                 setSelectedCardIndices(prev => prev.filter(i => i !== index));
                               }}
                             > <Trash2 className="h-2.5 w-2.5" /> </Button>
                           )}
+                          {/* スロット番号 (削除) */}
                         </div>
                       ))}
                     </div>
@@ -764,29 +813,35 @@ export function IntegratedCardEditor({
                  <Tooltip>
                    <TooltipTrigger asChild>
                      <Button
-                       variant="outline" size="icon"
-                       onClick={() => setCurrentPageIndex(currentPageIndex - 1)} // Use prop
+                       variant="outline"
+                       size="icon"
+                       onClick={() => setCurrentPageIndex(currentPageIndex - 1)}
                        disabled={currentPageIndex === 0}
                        className="border-gold-500"
-                     > <ChevronLeft className="h-4 w-4" /> </Button>
+                     >
+                       <ChevronLeft className="h-4 w-4" />
+                     </Button>
                    </TooltipTrigger>
                    <TooltipContent><p>{t("pagination.previous")}</p></TooltipContent>
                  </Tooltip>
                </TooltipProvider>
 
                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                 {t("pagination.page")} {currentPageIndex + 1} / {pageCount} {/* Use props */}
+                 {t("pagination.page")} {currentPageIndex + 1} / {pageCount}
                </span>
 
                <TooltipProvider>
                  <Tooltip>
                    <TooltipTrigger asChild>
                      <Button
-                       variant="outline" size="icon"
-                       onClick={() => setCurrentPageIndex(currentPageIndex + 1)} // Use prop
-                       disabled={currentPageIndex === pageCount - 1} // Use prop
+                       variant="outline"
+                       size="icon"
+                       onClick={() => setCurrentPageIndex(currentPageIndex + 1)}
+                       disabled={currentPageIndex === pageCount - 1}
                        className="border-gold-500"
-                     > <ChevronRight className="h-4 w-4" /> </Button>
+                     >
+                       <ChevronRight className="h-4 w-4" />
+                     </Button>
                    </TooltipTrigger>
                    <TooltipContent><p>{t("pagination.next")}</p></TooltipContent>
                  </Tooltip>
@@ -795,7 +850,12 @@ export function IntegratedCardEditor({
                <TooltipProvider>
                  <Tooltip>
                    <TooltipTrigger asChild>
-                     <Button variant="outline" size="icon" onClick={addPage} className="border-gold-500"> {/* Use prop */}
+                     <Button
+                       variant="outline"
+                       size="icon"
+                       onClick={addPage}
+                       className="border-gold-500"
+                     >
                        <PlusSquare className="h-4 w-4" />
                      </Button>
                    </TooltipTrigger>
@@ -806,7 +866,12 @@ export function IntegratedCardEditor({
                <TooltipProvider>
                  <Tooltip>
                    <TooltipTrigger asChild>
-                     <Button variant="destructive" size="icon" onClick={deletePage} disabled={pageCount <= 1}> {/* Use props */}
+                     <Button
+                       variant="destructive"
+                       size="icon"
+                       onClick={deletePage}
+                       disabled={pageCount <= 1} // Disable if only one page exists
+                     >
                        <Trash2 className="h-4 w-4" />
                      </Button>
                    </TooltipTrigger>
@@ -818,7 +883,11 @@ export function IntegratedCardEditor({
              <div className="mt-6 space-y-4">
                {/* Hidden input for the upload button */}
                <Input
-                 ref={uploadInputRef} type="file" accept="image/*" multiple className="hidden"
+                 ref={uploadInputRef}
+                 type="file"
+                 accept="image/*"
+                 multiple // Allow multiple file selection
+                 className="hidden"
                  onChange={handleUploadFileChange}
                />
                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -829,7 +898,7 @@ export function IntegratedCardEditor({
                     "flex flex-col items-center justify-center w-full sm:w-auto sm:flex-1 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
                     isProcessingImage ? "opacity-50 cursor-not-allowed" : ""
                   )}
-                  style={{ minHeight: '60px' }}
+                  style={{ minHeight: '60px' }} // Ensure minimum height
                 >
                   <Upload className="h-6 w-6 text-gray-500 dark:text-gray-400 mb-1" />
                   <span className="text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -837,35 +906,45 @@ export function IntegratedCardEditor({
                       ? `${t("action.clickOrDropToUpload")} (${selectedCardIndices.length} スロット選択中)`
                       : t("action.clickOrDropToUpload")}
                   </span>
+                  {/* Optionally show target slot info more explicitly */}
+                  {/* {selectedCardIndices.length === 1 && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      (スロット {selectedCardIndices[0] + 1} へ)
+                    </span>
+                  )} */}
                  </div>
-
+ 
                  {/* Export Scope Toggle & Export Buttons */}
                  <div className="flex flex-col sm:flex-row items-center justify-end gap-2 w-full sm:w-auto">
-                   {/* Export Scope Toggle - Uses exportScope and setExportScope props */}
+                   {/* Export Scope Toggle */}
                    <ToggleGroup
-                     type="single" value={exportScope} // Use prop
-                     onValueChange={(value) => { if (value === 'current' || value === 'all') { setExportScope(value); } }} // Use prop
-                     className="border border-gold-500 rounded-md overflow-hidden h-10"
+                     type="single"
+                     value={exportScope}
+                     onValueChange={(value) => {
+                       // Ensure the value is one of the allowed types before setting
+                       if (value === 'current' || value === 'all') {
+                         setExportScope(value);
+                       }
+                     }}
+                     className="border border-gray-300 dark:border-gray-700 rounded-md overflow-hidden h-10" // Added height
                      aria-label="Export Scope"
                    >
-                     <ToggleGroupItem value="current" aria-label="Export current page" className="data-[state=on]:bg-gold-500 data-[state=on]:text-black px-3 text-xs sm:text-sm h-full">
+                     <ToggleGroupItem value="current" aria-label="Export current page" className="data-[state=on]:bg-gold-100 dark:data-[state=on]:bg-gold-900 data-[state=on]:text-gold-900 dark:data-[state=on]:text-gold-100 px-3 text-xs sm:text-sm h-full"> {/* Added h-full */}
                        {t("export.scope.current")}
                      </ToggleGroupItem>
-                     <ToggleGroupItem value="all" aria-label="Export all pages" className="data-[state=on]:bg-gold-500 data-[state=on]:text-black px-3 text-xs sm:text-sm h-full">
+                     <ToggleGroupItem value="all" aria-label="Export all pages" className="data-[state=on]:bg-gold-100 dark:data-[state=on]:bg-gold-900 data-[state=on]:text-gold-900 dark:data-[state=on]:text-gold-100 px-3 text-xs sm:text-sm h-full"> {/* Added h-full */}
                        {t("export.scope.all")}
                      </ToggleGroupItem>
                    </ToggleGroup>
-
+ 
                    {/* Existing Export Buttons */}
                    <div className="flex space-x-2 justify-end w-full sm:w-auto">
-                     <Button variant="outline" onClick={handlePrint} disabled={isPrinting || isExporting || containerWidth <= 0} className="border-gold-500 flex-1 sm:flex-none sm:w-28">
+                     <Button variant="outline" onClick={() => window.print()} className="border-gold-500 flex-1 sm:flex-none sm:w-28">
                        <Printer className="mr-2 h-4 w-4" /> {t("action.print")}
                      </Button>
-                     {exportScope === 'current' && (
-                       <Button onClick={handleExportPNG} disabled={isExporting || containerWidth <= 0} className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28">
-                         <Download className="mr-2 h-4 w-4" /> PNG
-                       </Button>
-                     )}
+                     <Button onClick={handleExportPNG} disabled={isExporting || containerWidth <= 0} className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28">
+                       <Download className="mr-2 h-4 w-4" /> PNG
+                     </Button>
                      <Button onClick={handleExportPDF} disabled={isExporting || containerWidth <= 0} className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28">
                        <Download className="mr-2 h-4 w-4" /> PDF
                      </Button>

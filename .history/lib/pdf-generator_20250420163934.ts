@@ -26,7 +26,7 @@ export interface CardData {
 }
 
 // Options specific to PDF export (multi-page)
-export interface PdfExportOptions { // Add export
+interface PdfExportOptions {
   pages: (CardData | null)[][]; // Array of pages, each page is an array of CardData or null
   spacing: number;
   cardType: string;
@@ -38,7 +38,7 @@ export interface PdfExportOptions { // Add export
 }
 
 // Options specific to PNG export (single-page)
-export interface PngExportOptions { // Add export
+interface PngExportOptions {
   cards: CardData[]; // Single array of cards for the current page
   spacing: number;
   cardType: string;

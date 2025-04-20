@@ -1,7 +1,6 @@
 // PDF and PNG generation implementation with improved quality
 import { jsPDF } from "jspdf"; // Import jsPDF directly
 // Import necessary functions from cmyk-conversion
-// Note: These imports might show errors until cmyk-conversion.ts is fixed
 import { createPrintReadyCanvas, renderHighQualityCards, applyCmykProfile, loadCmykProfile } from "./cmyk-conversion";
 
 // --- Interfaces ---
@@ -26,7 +25,7 @@ export interface CardData {
 }
 
 // Options specific to PDF export (multi-page)
-export interface PdfExportOptions { // Add export
+interface PdfExportOptions {
   pages: (CardData | null)[][]; // Array of pages, each page is an array of CardData or null
   spacing: number;
   cardType: string;
@@ -38,7 +37,7 @@ export interface PdfExportOptions { // Add export
 }
 
 // Options specific to PNG export (single-page)
-export interface PngExportOptions { // Add export
+interface PngExportOptions {
   cards: CardData[]; // Single array of cards for the current page
   spacing: number;
   cardType: string;
@@ -115,7 +114,7 @@ export async function generatePDF(
 
       try {
         let imageDataForPdf: string | ArrayBuffer | null = null; // Data to be added to PDF
-        let imageFormatForPdf: "JPEG" | "PNG" = "PNG"; // Default to PNG, will be changed if needed
+        let imageFormatForPdf: "JPEG" | "PNG" | "UNKNOWN" = "UNKNOWN"; // Format for pdf.addImage
 
         // --- Image Loading ---
         const img = await loadImage(card.image); // Load image using helper
@@ -182,127 +181,3 @@ export async function generatePDF(
             imageDataForPdf = finalImageDataUrl;
             imageFormatForPdf = "PNG";
           }
-        } else if (cmykConversion && cmykMode === 'simple') {
-          // Simple CMYK (Simulation) - Export as high-quality JPEG (RGB).
-          // Actual simulation isn't applied here, relies on viewer/printer.
-          console.warn(`Simple CMYK simulation for PDF card ${index} on page ${pageIndex} means exporting as RGB JPEG.`);
-          imageDataForPdf = tempCanvas.toDataURL('image/jpeg', 0.92); // High quality JPEG
-          imageFormatForPdf = "JPEG";
-        } else {
-          // No CMYK or fallback - Use PNG for best quality
-          imageDataForPdf = finalImageDataUrl;
-          imageFormatForPdf = "PNG";
-        }
-
-        // --- Add Image to PDF ---
-        // Use imageDataForPdf !== null as the condition.
-        if (imageDataForPdf !== null) {
-          pdf.addImage(
-            // Convert ArrayBuffer to Uint8Array if needed, otherwise pass the string (Data URL)
-            imageDataForPdf instanceof ArrayBuffer ? new Uint8Array(imageDataForPdf) : imageDataForPdf,
-            imageFormatForPdf, // This will be 'JPEG' or 'PNG' here
-            drawXMM,
-            drawYMM,
-            drawCardWidthMM,
-            drawCardHeightMM,
-            `card_${pageIndex}_${index}`, // Unique alias per card per page
-            'NONE' // Let jsPDF handle compression based on format
-          );
-        } else {
-           console.warn(`Skipping card ${index} on page ${pageIndex} due to missing image data.`);
-        }
-
-      } catch (error) {
-        console.error(`Error processing card ${index} on page ${pageIndex} for PDF:`, error);
-        // Draw an error placeholder in the PDF? Difficult without direct access to PDF drawing here.
-        // Could add text annotation, but might clutter. Logging is primary for now.
-      }
-    }
-  } // End of page loop
-
-  // Set PDF properties
-  pdf.setProperties({
-    title: "TCG Proxy Cards",
-    subject: "Trading Card Game Proxy Cards",
-    creator: "TCG Proxy Creator",
-    keywords: "tcg, proxy, cards",
-  });
-
-  console.log("PDF generation complete.");
-  return pdf.output('blob');
-}
-
-// --- PNG Generation (Single-page, uses existing canvas/rendering logic) ---
- export async function generatePNG(options: PngExportOptions): Promise<Blob> { // Use PngExportOptions type
-   try {
-     // Destructure including canvas from PngExportOptions
-     const { cards, cmykConversion, cmykMode, dpi, dimensions, spacing, cardType, canvas } = options
-
-     let printCanvas: HTMLCanvasElement; // Explicitly type printCanvas
-
-    // Use the high-quality rendering function if dimensions are provided
-    // This function should handle drawing all cards for the single page onto a new canvas
-    if (dimensions) {
-      console.log("Using renderHighQualityCards for PNG generation.");
-      printCanvas = await renderHighQualityCards(
-        cards, // Pass the single page card array
-        {
-          ...dimensions, // Spread dimensions
-          spacing, // Add spacing
-         },
-         dpi,
-         cmykConversion,
-         cmykMode, // Pass cmykMode
-       );
-     } else {
-      // Fallback to the old method using the preview canvas (lower quality)
-      console.warn("Falling back to createPrintReadyCanvas for PNG generation (using preview canvas).");
-      // Apply simulation only in simple mode for PNG export as well
-      printCanvas = createPrintReadyCanvas(canvas, dpi, cmykConversion && cmykMode === 'simple'); // Use destructured canvas
-    }
-
-    // Convert the final canvas to PNG blob with maximum quality
-    return new Promise((resolve, reject) => {
-      printCanvas.toBlob(
-        (blob) => {
-          if (blob) {
-            console.log("PNG blob created successfully.");
-            resolve(blob);
-          } else {
-            console.error("Failed to create PNG blob from canvas.");
-            reject(new Error("Failed to create PNG blob"));
-          }
-        },
-        "image/png",
-        1.0, // Maximum quality for PNG (Note: quality parameter is typically for JPEG)
-      );
-    });
-  } catch (error) {
-    console.error("PNG generation error:", error);
-    throw new Error(`Failed to generate PNG: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-// --- Helper Functions ---
-// Helper function to load an image and return a Promise
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous"; // Allow loading from data URLs or other origins if CORS configured
-    img.onload = () => resolve(img);
-    // More specific error handling
-    img.onerror = (event) => {
-        let errorMsg = "Unknown image loading error";
-        if (typeof event === 'string') {
-            errorMsg = event;
-        } else if (event instanceof ErrorEvent) {
-            errorMsg = event.message;
-        } else if (event && typeof event === 'object' && 'type' in event) {
-            errorMsg = `Image load failed with event type: ${event.type}`;
-        }
-         console.error("Image loading failed:", event, "Source:", src.substring(0, 100) + "..."); // Log truncated src
-         reject(new Error(`Failed to load image: ${errorMsg}`));
-    };
-    img.src = src;
-  });
-}

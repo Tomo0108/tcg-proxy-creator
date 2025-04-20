@@ -229,11 +229,7 @@ export default function CreatePage() {
                // Pass all pages for potential multi-page export (if needed later)
                allPages={pages}
                // Pass export scope state and setter
-               exportScope={exportScope}
-               setExportScope={setExportScope}
-               />
-            </div>
-          </div>
+         </div>
       </div>
       <Toaster />
     </div>

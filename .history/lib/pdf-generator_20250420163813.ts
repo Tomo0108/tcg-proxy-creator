@@ -26,7 +26,7 @@ export interface CardData {
 }
 
 // Options specific to PDF export (multi-page)
-export interface PdfExportOptions { // Add export
+interface PdfExportOptions {
   pages: (CardData | null)[][]; // Array of pages, each page is an array of CardData or null
   spacing: number;
   cardType: string;
@@ -38,7 +38,7 @@ export interface PdfExportOptions { // Add export
 }
 
 // Options specific to PNG export (single-page)
-export interface PngExportOptions { // Add export
+interface PngExportOptions {
   cards: CardData[]; // Single array of cards for the current page
   spacing: number;
   cardType: string;
@@ -133,7 +133,6 @@ export async function generatePDF(
 
         // Ensure originalSize is available, provide default if missing (though it should be set by editor)
         const originalImgWidth = card.originalSize?.width || img.width;
-        const originalImgHeight = card.originalSize?.height || img.height;
 
         const imgAspectRatio = originalImgWidth / originalImgHeight;
         const cardAspectRatio = tempDrawCardWidthPx / tempDrawCardHeightPx;
@@ -195,12 +194,10 @@ export async function generatePDF(
         }
 
         // --- Add Image to PDF ---
-        // Use imageDataForPdf !== null as the condition.
-        if (imageDataForPdf !== null) {
+        if (imageDataForPdf && imageFormatForPdf !== "UNKNOWN") {
           pdf.addImage(
-            // Convert ArrayBuffer to Uint8Array if needed, otherwise pass the string (Data URL)
-            imageDataForPdf instanceof ArrayBuffer ? new Uint8Array(imageDataForPdf) : imageDataForPdf,
-            imageFormatForPdf, // This will be 'JPEG' or 'PNG' here
+            imageDataForPdf,
+            imageFormatForPdf,
             drawXMM,
             drawYMM,
             drawCardWidthMM,
@@ -209,7 +206,7 @@ export async function generatePDF(
             'NONE' // Let jsPDF handle compression based on format
           );
         } else {
-           console.warn(`Skipping card ${index} on page ${pageIndex} due to missing image data.`);
+           console.warn(`Skipping card ${index} on page ${pageIndex} due to missing image data or format.`);
         }
 
       } catch (error) {
@@ -231,6 +228,7 @@ export async function generatePDF(
   console.log("PDF generation complete.");
   return pdf.output('blob');
 }
+
 
 // --- PNG Generation (Single-page, uses existing canvas/rendering logic) ---
  export async function generatePNG(options: PngExportOptions): Promise<Blob> { // Use PngExportOptions type

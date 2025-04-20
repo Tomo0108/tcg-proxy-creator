@@ -315,7 +315,7 @@ const translations: Translations = {
   },
   "action.resetAll": { // Changed meaning to "Reset Current Page"
     en: "Reset Page",
-    ja: "リセット",
+    ja: "ページリセット",
   },
    "action.clickOrDropToUpload": {
      en: "Click or drag & drop to upload image",

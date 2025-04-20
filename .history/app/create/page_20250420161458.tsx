@@ -33,74 +33,36 @@ export default function CreatePage() {
    // Change 'cards' state to 'pages' state (array of pages, each page is an array of cards)
    const [pages, setPages] = useState<(CardData | null)[][]>([Array(MAX_CARDS_PER_PAGE).fill(null)]);
    // Add state for the currently selected page index
-    const [currentPageIndex, setCurrentPageIndex] = useState(0);
-    const [exportQuality, setExportQuality] = useState<"standard" | "high" | "ultra">("high") // Add exportQuality state
-    const [exportScope, setExportScope] = useState<'current' | 'all'>('current'); // Add state for export scope
-    const isMobile = useMobileDetect()
- 
-   // Handle card creation or update for the current page
-   const handleCardUpdate = (card: CardData, index: number) => { // Use CardData type
-    setPages(prevPages => {
-      const newPages = [...prevPages];
-      const currentPage = [...(newPages[currentPageIndex] || [])]; // Get current page or empty array
-      if (index >= 0 && index < MAX_CARDS_PER_PAGE) {
-        currentPage[index] = card;
-        newPages[currentPageIndex] = currentPage;
-      }
-      return newPages;
+   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+   const [exportQuality, setExportQuality] = useState<"standard" | "high" | "ultra">("high") // Add exportQuality state
+   const isMobile = useMobileDetect()
+
+  // Handle card creation or update for the current page
+  const handleCardUpdate = (card: any, index: number) => {
+    setCards(prevCards => { // 関数型アップデートを使用
+      const newCards = [...prevCards]; // 前の State (prevCards) をコピー
+      newCards[index] = card; // 特定のインデックスを更新
+      return newCards; // 新しい配列を返す
     });
   }
 
-  // Handle card removal for the current page
+  // Handle card removal
   const handleCardRemove = (index: number) => {
-    setPages(prevPages => {
-      const newPages = [...prevPages];
-      const currentPage = [...(newPages[currentPageIndex] || [])];
-      if (index >= 0 && index < MAX_CARDS_PER_PAGE) {
-        currentPage[index] = null;
-        newPages[currentPageIndex] = currentPage;
-      }
-      return newPages;
+    setCards(prevCards => { // こちらも念のため関数型アップデートに修正
+      const newCards = [...prevCards];
+      newCards[index] = null;
+      return newCards;
      });
    }
-
-   // Handle resetting the current page
-   const handleResetCurrentPage = () => {
-     setPages(prevPages => {
-       const newPages = [...prevPages];
-       if (newPages[currentPageIndex]) {
-         newPages[currentPageIndex] = Array(MAX_CARDS_PER_PAGE).fill(null);
-         toast({ title: t("toast.pageReset"), description: t("toast.pageResetDesc", { page: currentPageIndex + 1 }) });
-       }
-       return newPages;
-     });
+ 
+   // Handle resetting all cards
+   const handleResetCards = () => {
+     setCards(Array(9).fill(null));
+     // Optionally add a toast message here
+     // import { toast } from "@/components/ui/use-toast"; // If adding toast
+     // toast({ title: "リセット完了", description: "すべてのカードスロットをリセットしました。" });
    };
-
-   // Handle adding a new page
-   const addPage = () => {
-     setPages(prevPages => [...prevPages, Array(MAX_CARDS_PER_PAGE).fill(null)]);
-     // Switch to the newly added page
-     setCurrentPageIndex(pages.length); // Index will be the current length before adding
-     toast({ title: t("toast.pageAdded"), description: t("toast.pageAddedDesc", { page: pages.length + 1 }) });
-   };
-
-   // Handle deleting the current page
-   const deletePage = () => {
-     if (pages.length <= 1) {
-       toast({ title: t("toast.pageDeleteError"), description: t("toast.pageDeleteErrorDesc"), variant: "destructive" });
-       return; // Don't delete the last page
-     }
-     setPages(prevPages => {
-       const newPages = prevPages.filter((_, index) => index !== currentPageIndex);
-       // Adjust current page index if necessary
-       if (currentPageIndex >= newPages.length) {
-         setCurrentPageIndex(newPages.length - 1);
-       }
-       toast({ title: t("toast.pageDeleted"), description: t("toast.pageDeletedDesc", { page: currentPageIndex + 1 }) });
-       return newPages;
-     });
-   };
-
+ 
    return (
      <div className="flex min-h-screen flex-col">
        <Header />
@@ -212,28 +174,15 @@ export default function CreatePage() {
               cardType={cardType}
               spacing={spacing}
               cmykConversion={cmykConversion}
-              // Pass the cards for the current page
-              cards={pages[currentPageIndex] || []} // Ensure fallback to empty array
-              onCardUpdate={handleCardUpdate}
-              onCardRemove={handleCardRemove}
-              // Pass the reset function for the current page
-              onResetCards={handleResetCurrentPage} // Rename prop for clarity? Or keep as is? Let's keep for now.
-              exportQuality={exportQuality}
-              cmykMode={cmykMode}
-              // Pass page-related props
-              currentPageIndex={currentPageIndex}
-              pageCount={pages.length}
-              setCurrentPageIndex={setCurrentPageIndex}
-              addPage={addPage}
-              deletePage={deletePage}
-               // Pass all pages for potential multi-page export (if needed later)
-               allPages={pages}
-               // Pass export scope state and setter
-               exportScope={exportScope}
-               setExportScope={setExportScope}
-               />
-            </div>
-          </div>
+              cards={cards}
+                onCardUpdate={handleCardUpdate}
+                onCardRemove={handleCardRemove}
+                onResetCards={handleResetCards} // Pass reset function
+                exportQuality={exportQuality}
+                cmykMode={cmykMode} // Pass cmykMode prop
+              />
+           </div>
+         </div>
       </div>
       <Toaster />
     </div>

@@ -33,13 +33,12 @@ export default function CreatePage() {
    // Change 'cards' state to 'pages' state (array of pages, each page is an array of cards)
    const [pages, setPages] = useState<(CardData | null)[][]>([Array(MAX_CARDS_PER_PAGE).fill(null)]);
    // Add state for the currently selected page index
-    const [currentPageIndex, setCurrentPageIndex] = useState(0);
-    const [exportQuality, setExportQuality] = useState<"standard" | "high" | "ultra">("high") // Add exportQuality state
-    const [exportScope, setExportScope] = useState<'current' | 'all'>('current'); // Add state for export scope
-    const isMobile = useMobileDetect()
- 
-   // Handle card creation or update for the current page
-   const handleCardUpdate = (card: CardData, index: number) => { // Use CardData type
+   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+   const [exportQuality, setExportQuality] = useState<"standard" | "high" | "ultra">("high") // Add exportQuality state
+   const isMobile = useMobileDetect()
+
+  // Handle card creation or update for the current page
+  const handleCardUpdate = (card: CardData, index: number) => { // Use CardData type
     setPages(prevPages => {
       const newPages = [...prevPages];
       const currentPage = [...(newPages[currentPageIndex] || [])]; // Get current page or empty array
@@ -226,14 +225,11 @@ export default function CreatePage() {
               setCurrentPageIndex={setCurrentPageIndex}
               addPage={addPage}
               deletePage={deletePage}
-               // Pass all pages for potential multi-page export (if needed later)
-               allPages={pages}
-               // Pass export scope state and setter
-               exportScope={exportScope}
-               setExportScope={setExportScope}
-               />
-            </div>
-          </div>
+              // Pass all pages for potential multi-page export (if needed later)
+              allPages={pages}
+              />
+           </div>
+         </div>
       </div>
       <Toaster />
     </div>

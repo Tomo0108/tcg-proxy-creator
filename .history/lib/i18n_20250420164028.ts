@@ -315,7 +315,7 @@ const translations: Translations = {
   },
   "action.resetAll": { // Changed meaning to "Reset Current Page"
     en: "Reset Page",
-    ja: "リセット",
+    ja: "ページリセット",
   },
    "action.clickOrDropToUpload": {
      en: "Click or drag & drop to upload image",
@@ -398,71 +398,11 @@ interface LanguageState {
 export const useLanguageStore = create<LanguageState>((set) => ({
   locale: "en", // Default locale
   // Attempt to load locale from localStorage on initialization
-  // This part needs to run client-side only
-  // setLocale: (locale) => set({ locale }), // Original simple setter
-  // Enhanced setter with localStorage persistence
-  setLocale: (locale) => {
-    if (typeof window !== 'undefined') { // Ensure localStorage is available
-      try {
-        localStorage.setItem('locale', locale);
-      } catch (error) {
-        console.error("Failed to save locale to localStorage:", error);
-      }
-    }
-    set({ locale });
-  },
-}))
-
-// Initialize locale from localStorage client-side
-if (typeof window !== 'undefined') {
-  try {
-    const savedLocale = localStorage.getItem('locale') as Locale | null;
-    if (savedLocale && (savedLocale === 'en' || savedLocale === 'ja')) {
-      // Directly set the initial state if localStorage has a valid value
-      // Zustand's `set` isn't directly available here, so we use the store's `setState`
-      useLanguageStore.setState({ locale: savedLocale });
-    }
-  } catch (error) {
-    console.error("Failed to load locale from localStorage:", error);
-  }
-}
-
-
- export function useTranslation() {
-   const { locale, setLocale } = useLanguageStore()
-
-   // Modify t function to accept replacements
-   const t = (key: string, replacements?: Record<string, string | number>): string => {
-     let translation = key; // Default to key if not found
-     if (translations[key]) {
-       translation = translations[key][locale];
-     } else {
-       console.warn(`Translation missing for key: ${key}`);
-       // Try splitting the key and looking up parts (basic fallback)
-       const parts = key.split('.');
-       if (parts.length > 1) {
-         const lastPart = parts.pop();
-         const parentKey = parts.join('.');
-         if (translations[parentKey] && typeof translations[parentKey][locale] === 'object') {
-            // This case is unlikely with the current flat structure but added for robustness
-            // translation = (translations[parentKey][locale] as any)[lastPart || ''] || key;
-         } else if (lastPart) {
-            // Simple fallback: return the last part of the key capitalized
-            translation = lastPart.charAt(0).toUpperCase() + lastPart.slice(1);
-         }
-       }
-     }
-
-     // Perform replacements if provided
-     if (replacements && translation !== key) { // Only replace if translation was found
-       Object.keys(replacements).forEach((placeholder) => {
-         const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
-         translation = translation.replace(regex, String(replacements[placeholder]));
        });
      }
-
+ 
      return translation;
    }
-
+ 
    return { t, locale, setLocale }
  }

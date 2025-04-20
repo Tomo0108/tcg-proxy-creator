@@ -69,7 +69,6 @@ export function IntegratedCardEditor({
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false); // Add printing state
 
   // Refs
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -528,98 +527,6 @@ export function IntegratedCardEditor({
    }
    // --- End Export Handlers ---
 
-   // --- Print Handler ---
-   const handlePrint = async () => {
-     if (isPrinting || isExporting || containerWidth <= 0) {
-       toast({ title: "印刷不可", description: "現在他の処理を実行中か、プレビューの準備ができていません。", variant: "destructive" });
-       return;
-     }
-     setIsPrinting(true);
-     toast({ title: "印刷準備中", description: "高品質な印刷用データを生成しています..." });
-
-     let printFrame: HTMLIFrameElement | null = null;
-     let pdfUrl: string | null = null;
-
-     try {
-       const pagesToPrint = exportScope === 'all' ? allPages : [cards];
-       const printDimensions = { a4Width, a4Height, cardWidth: cardWidthMM, cardHeight: cardHeightMM, marginX: marginXMM, marginY: marginYMM, cardsPerRow, cardsPerColumn };
-       const printDpi = getDpiForQuality(); // Use export quality for printing
-
-       const options: PdfExportOptions = {
-         pages: pagesToPrint,
-         spacing, cardType, cmykConversion, cmykMode,
-         dpi: printDpi,
-         dimensions: printDimensions,
-       };
-
-       const pdfBlob = await generatePDF(options);
-       pdfUrl = URL.createObjectURL(pdfBlob);
-
-       printFrame = document.createElement('iframe');
-       printFrame.style.position = 'absolute';
-       printFrame.style.width = '0';
-       printFrame.style.height = '0';
-       printFrame.style.border = '0';
-       printFrame.style.visibility = 'hidden';
-       printFrame.src = pdfUrl;
-
-       const handleLoad = () => {
-         try {
-           if (printFrame?.contentWindow) {
-             printFrame.contentWindow.focus(); // Required for some browsers
-             printFrame.contentWindow.print();
-             // Cleanup is tricky because print dialog is modal.
-             // Removing automatic cleanup to prevent dialog from closing prematurely.
-             // Resource leak might occur, but browser should handle on tab close.
-             // setTimeout(() => { // Remove or comment out setTimeout
-               // if (printFrame) {
-               //   document.body.removeChild(printFrame); // Comment out cleanup
-               //   printFrame = null;
-               // }
-               // if (pdfUrl) {
-               //   URL.revokeObjectURL(pdfUrl); // Comment out cleanup
-               //   pdfUrl = null;
-               // }
-               setIsPrinting(false); // Keep resetting state
-               toast({ title: "印刷準備完了", description: "印刷ダイアログが表示されました。" }); // Keep toast
-             // }, 2000); // Remove or comment out setTimeout
-           } else {
-             throw new Error("印刷フレームのコンテンツが見つかりません。");
-           }
-         } catch (printError) {
-           console.error("Printing failed:", printError);
-           toast({ title: "印刷エラー", description: `印刷の実行に失敗しました: ${printError instanceof Error ? printError.message : t("toast.unknownError")}`, variant: "destructive" });
-           // Cleanup on error
-           if (printFrame) document.body.removeChild(printFrame);
-           if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-           setIsPrinting(false);
-         }
-       };
-
-       const handleError = () => {
-         console.error("Failed to load PDF in iframe.");
-         toast({ title: "印刷準備エラー", description: "印刷用PDFの読み込みに失敗しました。", variant: "destructive" });
-         if (printFrame) document.body.removeChild(printFrame);
-         if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-         setIsPrinting(false);
-       };
-
-       printFrame.addEventListener('load', handleLoad);
-       printFrame.addEventListener('error', handleError);
-
-       document.body.appendChild(printFrame);
-
-     } catch (error) {
-       console.error("PDF generation for printing failed:", error);
-       toast({ title: "印刷準備エラー", description: `印刷用PDFの生成に失敗しました: ${error instanceof Error ? error.message : t("toast.unknownError")}`, variant: "destructive" });
-       // Ensure cleanup even if PDF generation fails
-       if (printFrame && printFrame.parentNode) document.body.removeChild(printFrame);
-       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-       setIsPrinting(false);
-     }
-   };
-   // --- End Print Handler ---
-
   // File download helper
   const downloadFile = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -818,7 +725,169 @@ export function IntegratedCardEditor({
              <div className="mt-6 space-y-4">
                {/* Hidden input for the upload button */}
                <Input
-                 ref={uploadInputRef} type="file" accept="image/*" multiple className="hidden"
+                    <p>{t("action.resetAll")}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg overflow-hidden">
+              <div
+                ref={printRef}
+                className="relative bg-white dark:bg-gray-900 border rounded-lg mx-auto"
+                style={{
+                  width: "100%", aspectRatio: `${a4Width} / ${a4Height}`,
+                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)", overflow: "hidden",
+                  height: containerWidth > 0 ? `${(containerWidth / a4Width) * a4Height}px` : undefined,
+                  outline: containerWidth <= 0 ? '2px dashed red' : 'none',
+                }}
+              >
+                <canvas
+                  ref={canvasRef}
+                  id="print-layout-canvas"
+                  className="absolute top-0 left-0 w-full h-full"
+                  style={{ padding: 0, border: 'none', margin: 0, display: 'block' }}
+                />
+                {overlayStyles.display !== 'none' && gridStyles.display !== 'none' && (
+                  <div
+                    className="absolute top-0 left-0 w-full h-full z-10" // z-10 を追加
+                    style={overlayStyles}
+                  >
+                    <div className="grid h-full w-full" style={gridStyles}>
+                      {/* 複数選択用の隠し Input */}
+                      <Input
+                        ref={(el) => { inputRefs.current[-1] = el; }}
+                        type="file" accept="image/*" className="hidden"
+                        onChange={(e) => handleFileChange(e, -1)}
+                      />
+                      {Array(cardsPerRow * cardsPerColumn).fill(0).map((_, index) => (
+                        <div
+                          key={index}
+                          className={cn(
+                            "relative border border-dashed border-gray-400 dark:border-gray-600 rounded cursor-pointer transition-all hover:bg-yellow-50/10 dark:hover:bg-yellow-700/10 select-none", // select-none を追加
+                            selectedCardIndices.includes(index) ? "ring-2 ring-gold-500 ring-offset-1 bg-yellow-50/15 dark:bg-yellow-700/15" : "" // 背景色と透明度を調整
+                          )}
+                          style={{ pointerEvents: "auto", touchAction: 'none' }} // pointerEvents: "auto" を明示
+                          onPointerDown={() => handlePointerDown(index)} // Use PointerDown
+                          onPointerUp={() => handlePointerUp(index)}     // Use PointerUp
+                          onPointerLeave={() => handlePointerLeave(index)} // Use PointerLeave
+                          onContextMenu={(e) => e.preventDefault()} // コンテキストメニューを無効化
+                        >
+                          {/* 個別の隠し Input */}
+                          <Input
+                            ref={(el) => {
+                                if (index >= 0 && index < (cardsPerRow * cardsPerColumn)) {
+                                    inputRefs.current[index] = el;
+                                }
+                            }}
+                            type="file" accept="image/*" className="hidden"
+                            onChange={(e) => handleFileChange(e, index)}
+                           />
+                           {/* 削除ボタン (null チェックを明示的に) */}
+                           {cards[index] != null && (
+                             <Button
+                               variant="destructive" size="icon"
+                               className="absolute top-0.5 right-0.5 h-4 w-4 z-20 p-0 pointer-events-auto" // z-20 を追加
+                              onClick={(e) => {
+                                e.stopPropagation(); // 親要素へのイベント伝播を停止
+                                onCardRemove(index);
+                                setSelectedCardIndices(prev => prev.filter(i => i !== index));
+                              }}
+                            > <Trash2 className="h-2.5 w-2.5" /> </Button>
+                          )}
+                          {/* スロット番号 (削除) */}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                 {containerWidth <= 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200/50 dark:bg-gray-700/50 z-20">
+                        <p className="text-gray-500 dark:text-gray-400">レイアウトを計算中...</p>
+                    </div>
+                  )}
+               </div>
+             </div>
+             {/* --- Pagination Controls --- */}
+             <div className="mt-4 flex items-center justify-center space-x-2">
+               <TooltipProvider>
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button
+                       variant="outline"
+                       size="icon"
+                       onClick={() => setCurrentPageIndex(currentPageIndex - 1)}
+                       disabled={currentPageIndex === 0}
+                       className="border-gold-500"
+                     >
+                       <ChevronLeft className="h-4 w-4" />
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent><p>{t("pagination.previous")}</p></TooltipContent>
+                 </Tooltip>
+               </TooltipProvider>
+
+               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                 {t("pagination.page")} {currentPageIndex + 1} / {pageCount}
+               </span>
+
+               <TooltipProvider>
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button
+                       variant="outline"
+                       size="icon"
+                       onClick={() => setCurrentPageIndex(currentPageIndex + 1)}
+                       disabled={currentPageIndex === pageCount - 1}
+                       className="border-gold-500"
+                     >
+                       <ChevronRight className="h-4 w-4" />
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent><p>{t("pagination.next")}</p></TooltipContent>
+                 </Tooltip>
+               </TooltipProvider>
+
+               <TooltipProvider>
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button
+                       variant="outline"
+                       size="icon"
+                       onClick={addPage}
+                       className="border-gold-500"
+                     >
+                       <PlusSquare className="h-4 w-4" />
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent><p>{t("pagination.addPage")}</p></TooltipContent>
+                 </Tooltip>
+               </TooltipProvider>
+
+               <TooltipProvider>
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button
+                       variant="destructive"
+                       size="icon"
+                       onClick={deletePage}
+                       disabled={pageCount <= 1} // Disable if only one page exists
+                     >
+                       <Trash2 className="h-4 w-4" />
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent><p>{t("pagination.deletePage")}</p></TooltipContent>
+                 </Tooltip>
+               </TooltipProvider>
+             </div>
+             {/* --- End Pagination Controls --- */}
+             <div className="mt-6 space-y-4">
+               {/* Hidden input for the upload button */}
+               <Input
+                 ref={uploadInputRef}
+                 type="file"
+                 accept="image/*"
+                 multiple // Allow multiple file selection
+                 className="hidden"
                  onChange={handleUploadFileChange}
                />
                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -829,7 +898,7 @@ export function IntegratedCardEditor({
                     "flex flex-col items-center justify-center w-full sm:w-auto sm:flex-1 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
                     isProcessingImage ? "opacity-50 cursor-not-allowed" : ""
                   )}
-                  style={{ minHeight: '60px' }}
+                  style={{ minHeight: '60px' }} // Ensure minimum height
                 >
                   <Upload className="h-6 w-6 text-gray-500 dark:text-gray-400 mb-1" />
                   <span className="text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -837,35 +906,45 @@ export function IntegratedCardEditor({
                       ? `${t("action.clickOrDropToUpload")} (${selectedCardIndices.length} スロット選択中)`
                       : t("action.clickOrDropToUpload")}
                   </span>
+                  {/* Optionally show target slot info more explicitly */}
+                  {/* {selectedCardIndices.length === 1 && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      (スロット {selectedCardIndices[0] + 1} へ)
+                    </span>
+                  )} */}
                  </div>
-
+ 
                  {/* Export Scope Toggle & Export Buttons */}
                  <div className="flex flex-col sm:flex-row items-center justify-end gap-2 w-full sm:w-auto">
-                   {/* Export Scope Toggle - Uses exportScope and setExportScope props */}
+                   {/* Export Scope Toggle */}
                    <ToggleGroup
-                     type="single" value={exportScope} // Use prop
-                     onValueChange={(value) => { if (value === 'current' || value === 'all') { setExportScope(value); } }} // Use prop
-                     className="border border-gold-500 rounded-md overflow-hidden h-10"
+                     type="single"
+                     value={exportScope}
+                     onValueChange={(value) => {
+                       // Ensure the value is one of the allowed types before setting
+                       if (value === 'current' || value === 'all') {
+                         setExportScope(value);
+                       }
+                     }}
+                     className="border border-gray-300 dark:border-gray-700 rounded-md overflow-hidden h-10" // Added height
                      aria-label="Export Scope"
                    >
-                     <ToggleGroupItem value="current" aria-label="Export current page" className="data-[state=on]:bg-gold-500 data-[state=on]:text-black px-3 text-xs sm:text-sm h-full">
+                     <ToggleGroupItem value="current" aria-label="Export current page" className="data-[state=on]:bg-gold-100 dark:data-[state=on]:bg-gold-900 data-[state=on]:text-gold-900 dark:data-[state=on]:text-gold-100 px-3 text-xs sm:text-sm h-full"> {/* Added h-full */}
                        {t("export.scope.current")}
                      </ToggleGroupItem>
-                     <ToggleGroupItem value="all" aria-label="Export all pages" className="data-[state=on]:bg-gold-500 data-[state=on]:text-black px-3 text-xs sm:text-sm h-full">
+                     <ToggleGroupItem value="all" aria-label="Export all pages" className="data-[state=on]:bg-gold-100 dark:data-[state=on]:bg-gold-900 data-[state=on]:text-gold-900 dark:data-[state=on]:text-gold-100 px-3 text-xs sm:text-sm h-full"> {/* Added h-full */}
                        {t("export.scope.all")}
                      </ToggleGroupItem>
                    </ToggleGroup>
-
+ 
                    {/* Existing Export Buttons */}
                    <div className="flex space-x-2 justify-end w-full sm:w-auto">
-                     <Button variant="outline" onClick={handlePrint} disabled={isPrinting || isExporting || containerWidth <= 0} className="border-gold-500 flex-1 sm:flex-none sm:w-28">
+                     <Button variant="outline" onClick={() => window.print()} className="border-gold-500 flex-1 sm:flex-none sm:w-28">
                        <Printer className="mr-2 h-4 w-4" /> {t("action.print")}
                      </Button>
-                     {exportScope === 'current' && (
-                       <Button onClick={handleExportPNG} disabled={isExporting || containerWidth <= 0} className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28">
-                         <Download className="mr-2 h-4 w-4" /> PNG
-                       </Button>
-                     )}
+                     <Button onClick={handleExportPNG} disabled={isExporting || containerWidth <= 0} className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28">
+                       <Download className="mr-2 h-4 w-4" /> PNG
+                     </Button>
                      <Button onClick={handleExportPDF} disabled={isExporting || containerWidth <= 0} className="bg-gold-500 hover:bg-gold-600 flex-1 sm:flex-none sm:w-28">
                        <Download className="mr-2 h-4 w-4" /> PDF
                      </Button>

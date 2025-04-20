@@ -193,115 +193,56 @@ export async function renderHighQualityCards(
             const originalImgWidth = card.originalSize?.width || img.width;
             const originalImgHeight = card.originalSize?.height || img.height;
             const imgAspectRatio = originalImgWidth / originalImgHeight;
-            const cardAspectRatio = cardWidthPx / cardHeightPx;
-            const cardScale = card.scale || 1;
-            const cardPosition = card.position || { x: 0, y: 0 };
+          ctx.rect(x, y, cardWidth, cardHeight);
+          ctx.clip();
 
-            let baseWidth, baseHeight;
-            if (imgAspectRatio > cardAspectRatio) {
-              baseHeight = cardHeightPx;
-              baseWidth = baseHeight * imgAspectRatio;
-            } else {
-              baseWidth = cardWidthPx;
-              baseHeight = baseWidth / imgAspectRatio;
-            }
+          // Calculate image draw size similar to renderCanvas, but using high-res dimensions
+          const imgAspectRatio = img.width / img.height;
+          const cardAspectRatio = cardWidth / cardHeight;
+          const cardScale = card.scale || 1; // Use saved relative scale (1 = fitted)
 
-            const targetWidth = baseWidth * cardScale;
-            const targetHeight = baseHeight * cardScale;
-
-            // Calculate offset including cardPosition adjustment
-            const offsetX = x + (cardWidthPx - targetWidth) / 2 + cardPosition.x * Math.abs(cardWidthPx - targetWidth) / 2;
-            const offsetY = y + (cardHeightPx - targetHeight) / 2 + cardPosition.y * Math.abs(cardHeightPx - targetHeight) / 2;
-
-            // Draw the image
-            ctx.drawImage(img, offsetX, offsetY, targetWidth, targetHeight);
-
-            ctx.restore(); // Restore context to remove clipping
-            resolve();
-          } catch (drawError) {
-            console.error(`Error drawing image for card ${index}:`, drawError);
-            reject(drawError); // Reject promise on drawing error
+          // Calculate base size to fit the image within the high-res card slot (cardWidth, cardHeight)
+          let baseWidth, baseHeight;
+          if (imgAspectRatio > cardAspectRatio) { // Image wider than card slot
+            baseWidth = cardWidth; // Fit width
+            baseHeight = baseWidth / imgAspectRatio;
+          } else { // Image taller than or same aspect ratio as card slot
+            baseHeight = cardHeight; // Fit height
+            baseWidth = baseHeight * imgAspectRatio;
           }
-        };
-        img.onerror = (errorEvent) => {
-          console.error(`Failed to load image for card ${index}:`, card.image.substring(0,100)+"...", errorEvent);
-          // Resolve anyway to not block Promise.all, but log the error
-          // Alternatively, reject(errorEvent) if loading failure should stop the process
+
+          // Apply the relative scale to the base (fitted) size
+          const targetWidth = baseWidth * cardScale;
+          const targetHeight = baseHeight * cardScale;
+
+          // Center the final scaled image within the card area (using high-res coordinates x, y)
+          const imgDrawX = x + (cardWidth - targetWidth) / 2;
+          const imgDrawY = y + (cardHeight - targetHeight) / 2;
+
+          // Draw the image with calculated dimensions
+          ctx.drawImage(img, imgDrawX, imgDrawY, targetWidth, targetHeight);
+
+          ctx.restore(); // Restore context to remove clipping
           resolve();
+        };
+        img.onerror = () => {
+          console.error("Failed to load image:", card.image)
+          resolve()
         }
         img.src = card.image
       })
     }
-    return Promise.resolve() // Resolve immediately for empty slots
+    return Promise.resolve()
   })
 
-  // Wait for all images to be drawn or load errors handled
-   try {
-     await Promise.all(drawPromises);
-   } catch (error) {
-     console.error("Error occurred during card drawing:", error);
-     // Decide how to handle: maybe return a partially drawn canvas or throw
-     // For now, continue to potentially apply CMYK simulation
-   }
+  // Wait for all images to be drawn
+   await Promise.all(drawPromises)
 
-   // Apply CMYK simulation only if mode is 'simple' and CMYK is enabled
+   // Apply CMYK simulation only if mode is 'simple'
    if (applyCmyk && cmykMode === 'simple') {
-     console.log("Applying simple CMYK simulation to rendered canvas.");
-     return applyRgbToCmykToCanvas(canvas);
+     return applyRgbToCmykToCanvas(canvas)
    }
    // Otherwise (CMYK disabled or mode is 'accurate'), return the RGB canvas
-   console.log("Returning RGB canvas (CMYK disabled or mode is 'accurate').");
-   return canvas;
-}
 
-
-// --- Accurate CMYK Profile Handling ---
-
-let cachedCmykProfile: ArrayBuffer | null = null;
-
-// Helper function to load CMYK profile (cached)
-// Ensure this runs client-side
-export async function loadCmykProfile(): Promise<ArrayBuffer> {
-  if (typeof window === 'undefined') {
-    throw new Error("loadCmykProfile can only be called client-side.");
-  }
-  if (cachedCmykProfile) {
-    console.log("Using cached CMYK profile.");
-    return cachedCmykProfile;
-  }
-
-  try {
-    console.log("Fetching CMYK profile...");
-    // Assuming the profile is in the public folder
-    const response = await fetch('/profiles/ISOcoated_v2_eci.icc'); // Adjust path as needed
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CMYK profile: ${response.statusText}`);
-    }
-    cachedCmykProfile = await response.arrayBuffer();
-    console.log("CMYK profile loaded and cached.");
-    return cachedCmykProfile;
-  } catch (error) {
-    console.error("Error loading CMYK profile:", error);
-    throw error; // Re-throw the error to be handled by the caller
-  }
-}
-
-// Function to apply CMYK profile using a hypothetical library or native module
-// This remains a placeholder as client-side ICC profile application is complex.
-export async function applyCmykProfile(imageDataUrl: string, profile: ArrayBuffer): Promise<ArrayBuffer> {
-  console.warn("Accurate CMYK profile application (applyCmykProfile) is not implemented in the browser. Returning placeholder data.");
-  // Placeholder: In a real application, this would involve:
-  // 1. Decoding the imageDataUrl (likely PNG or JPEG) into raw pixel data (e.g., RGBA).
-  // 2. Using a color management library (like LittleCMS compiled to WebAssembly)
-  //    to perform the color transformation from sRGB (assumed) to the target CMYK profile.
-  // 3. Encoding the resulting CMYK pixel data into a suitable format (like a TIFF or JPEG with CMYK color space).
-  // 4. Returning the ArrayBuffer of the CMYK image file.
-
-  // For now, we return a dummy ArrayBuffer to satisfy the type signature.
-  // In generatePDF, this ArrayBuffer will be wrapped in Uint8Array and passed to jsPDF.
-  // jsPDF's handling of raw CMYK ArrayBuffer might be limited; it expects specific formats.
-  // Returning the profile itself as a dummy buffer:
-  // return profile;
-  // Returning an empty buffer as a clearer placeholder:
-  return new ArrayBuffer(0); // Return empty buffer to indicate failure/placeholder
+  return canvas
 }
