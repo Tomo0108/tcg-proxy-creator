@@ -238,38 +238,18 @@ export function IntegratedCardEditor({
                                           .filter(pair => pair.index !== undefined); // Filter out pairs with undefined index just in case
 
       if (pairsToProcess.length === 0) {
-        // toast({ title: "処理対象なし", description: "有効なファイルとスロットの組み合わせが見つかりません。", variant: "warning" });
-        e.target.value = ""; // Reset input
-        uploadTargetIndicesRef.current = null; // Clear ref
-        return;
-      }
-
-      setIsProcessingImage(true); // Set processing state
-
-      const processPromises = pairsToProcess.map(({ file, index }) => {
-        // Return a new promise for each file processing
-        return new Promise<void>((resolve, reject) => {
-          const reader = new FileReader();
           reader.onload = (event) => {
             const img = new Image();
             img.onload = () => {
               const imageDataUrl = event.target?.result as string;
               const originalSize = { width: img.width, height: img.height };
-              const cardData: CardData = {
-                image: imageDataUrl,
-                scale: 1,
-                type: cardType,
-                originalSize,
-                position: { x: 0, y: 0 }
+              const cardData: CardData = { // Ensure CardData type
+                image: imageDataUrl, scale: 1, type: cardType, originalSize, position: { x: 0, y: 0 }
               };
-              // Validate index before calling onCardUpdate
-              if (cardsPerRow > 0 && cardsPerColumn > 0 && index >= 0 && index < cardsPerRow * cardsPerColumn) {
-                // console.log(`Updating card at index ${index} for page ${currentPageIndex}`); // Add log for debugging
-                onCardUpdate(cardData, index); // Call prop function to update parent state
-              } else {
-                 console.warn(`Invalid index ${index} skipped during multi-upload.`);
+              if (cardsPerRow > 0 && cardsPerColumn > 0 && targetIndex >= 0 && targetIndex < cardsPerRow * cardsPerColumn) {
+                onCardUpdate(cardData, targetIndex); // Call prop function
               }
-              resolve(); // Resolve the promise for this file
+              resolve();
             };
             img.onerror = () => reject(new Error(`画像読み込みエラー: ${file.name}`));
             img.src = event.target?.result as string;
@@ -279,40 +259,18 @@ export function IntegratedCardEditor({
         });
       });
 
-      // Wait for all file processing promises to settle
-      Promise.allSettled(processPromises) // Use allSettled to handle individual errors
-        .then((results) => {
-          const successfulUploads = results.filter(r => r.status === 'fulfilled').length;
-          const failedUploads = results.filter(r => r.status === 'rejected');
-
-          if (successfulUploads > 0) {
-            // toast({ title: t("toast.imageAdded"), description: `${successfulUploads} 個の画像をスロット (Page ${currentPageIndex + 1}) に追加しました。` });
-          }
-          if (failedUploads.length > 0) {
-             failedUploads.forEach(result => {
-               if (result.status === 'rejected') {
-                 console.error("Upload failed:", result.reason);
-                 // toast({ title: "一部画像の処理に失敗", description: result.reason?.message || "画像の処理中にエラーが発生しました。", variant: "destructive" });
-               }
-             });
-          }
+      Promise.all(processPromises)
+        .then(() => {
+          // toast({ title: t("toast.imageAdded"), description: `${filesToProcess.length} 個の画像をスロット (Page ${currentPageIndex + 1}) に追加しました。` });
+        })
+        .catch((error) => {
+          // toast({ title: "一部画像の処理に失敗", description: error.message || "画像の処理中にエラーが発生しました。", variant: "destructive" });
         })
         .finally(() => {
-          setIsProcessingImage(false); // Reset processing state
-          setSelectedCardIndices([]); // Clear selection after upload
+          setIsProcessingImage(false);
+          setSelectedCardIndices([]);
         });
-    } else {
-       // Handle cases where files or targetIndices are missing
-       if (!files || files.length === 0) {
-         // console.log("No files selected."); // Log for debugging
-       }
-       if (!targetIndices || targetIndices.length === 0) {
-         // console.log("No target indices available."); // Log for debugging
-         // toast({ title: "アップロード先不明", description: "アップロード先のスロットが見つかりません。", variant: "warning" });
-       }
     }
-
-    // Always reset the file input and the ref
     e.target.value = "";
     uploadTargetIndicesRef.current = null;
   };

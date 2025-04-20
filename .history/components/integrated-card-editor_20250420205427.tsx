@@ -286,48 +286,6 @@ export function IntegratedCardEditor({
           const failedUploads = results.filter(r => r.status === 'rejected');
 
           if (successfulUploads > 0) {
-            // toast({ title: t("toast.imageAdded"), description: `${successfulUploads} 個の画像をスロット (Page ${currentPageIndex + 1}) に追加しました。` });
-          }
-          if (failedUploads.length > 0) {
-             failedUploads.forEach(result => {
-               if (result.status === 'rejected') {
-                 console.error("Upload failed:", result.reason);
-                 // toast({ title: "一部画像の処理に失敗", description: result.reason?.message || "画像の処理中にエラーが発生しました。", variant: "destructive" });
-               }
-             });
-          }
-        })
-        .finally(() => {
-          setIsProcessingImage(false); // Reset processing state
-          setSelectedCardIndices([]); // Clear selection after upload
-        });
-    } else {
-       // Handle cases where files or targetIndices are missing
-       if (!files || files.length === 0) {
-         // console.log("No files selected."); // Log for debugging
-       }
-       if (!targetIndices || targetIndices.length === 0) {
-         // console.log("No target indices available."); // Log for debugging
-         // toast({ title: "アップロード先不明", description: "アップロード先のスロットが見つかりません。", variant: "warning" });
-       }
-    }
-
-    // Always reset the file input and the ref
-    e.target.value = "";
-    uploadTargetIndicesRef.current = null;
-  };
-
-  // Handle click for the dedicated upload area
-  const handleUploadButtonClick = () => {
-    let targetIndices: number[] | null = null;
-    const maxSlots = cardsPerRow * cardsPerColumn;
-
-    if (selectedCardIndices.length > 0) {
-      targetIndices = [...selectedCardIndices];
-    } else {
-      const emptyIndices: number[] = [];
-      for (let i = 0; i < maxSlots && emptyIndices.length < 9; i++) {
-        const card = cards[i]; // Use 'cards' prop (current page)
         if (card == null || card.image == null) {
           emptyIndices.push(i);
         }
